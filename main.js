@@ -991,3 +991,23 @@ function initVideoRemover() {
     }
   });
 }
+
+// ── GitHub Star Count Fetcher ──
+async function fetchGitHubStars() {
+  const starCountEl = document.getElementById('star-count-num');
+  if (!starCountEl) return;
+  try {
+    const res = await fetch('https://api.github.com/repos/ishara-madu/gemini-watermark-remover');
+    if (res.ok) {
+      const data = await res.json();
+      if (typeof data.stargazers_count === 'number') {
+        starCountEl.textContent = data.stargazers_count;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not fetch GitHub star count:', e);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', fetchGitHubStars);
+fetchGitHubStars();

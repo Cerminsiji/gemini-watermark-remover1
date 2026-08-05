@@ -1,87 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gemini Watermark Remover</title>
+  <title>Gemini Watermark Remover | AI Image & Veo Video Cleaner</title>
+  <meta name="description"
+    content="Clean and remove Google Gemini AI watermarks from images and Veo videos instantly in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="./style.css" />
   <script defer src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
 </head>
+
 <body>
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <div class="brand">
+        <img src="./assets/logo.webp" width="50" style="object-fit: cover;" />
+        <div class="brand-text">
+          <h1 class="brand-title">Gemini Watermark Remover</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="https://github.com/ishara-madu/gemini-watermark-remover" target="_blank" rel="noopener noreferrer"
+          class="btn-github" title="Star on GitHub">
+          <iconify-icon icon="ph:github-logo" width="20"></iconify-icon>
+          <iconify-icon icon="ph:star-fill" width="14" style="color: #eab308;"></iconify-icon>
+          <span id="star-count-num">--</span>
+          <span class="btn-github-label">Stars</span>
+        </a>
+        <a href="https://buymeacoffee.com" target="_blank" rel="noopener noreferrer" class="btn-donate"
+          title="Support the project">
+          <iconify-icon icon="ph:heart-fill" width="16" style="color: #f43f5e;"></iconify-icon>
+          <span>Donate</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
   <main class="container">
     <!-- Tab Switcher -->
     <div class="tab-container">
       <button id="tab-image" class="tab-btn active">
-        <iconify-icon icon="ph:image-bold" width="18"></iconify-icon> Image Remover
+        <iconify-icon icon="ph:image-bold" width="18"></iconify-icon>
+        <span>Image Remover</span>
       </button>
       <button id="tab-video" class="tab-btn">
-        <iconify-icon icon="ph:video-camera-bold" width="18"></iconify-icon> Video Remover
+        <iconify-icon icon="ph:video-camera-bold" width="18"></iconify-icon>
+        <span>Video Remover</span>
       </button>
     </div>
 
     <!-- Image Removal Panel -->
     <section id="panel-image" class="card">
       <div class="preset-wrapper">
-        <label>
-          Watermark Position Preset:
-          <select id="img-preset">
-            <option value="new">New Gemini Images (Offset 128px)</option>
-            <option value="classic">Classic Corner (Bottom-Right)</option>
-          </select>
+        <label for="img-preset" class="preset-label">
+          <iconify-icon icon="ph:sliders-horizontal-bold" width="16"></iconify-icon>
+          Watermark Preset:
         </label>
+        <select id="img-preset" class="preset-select">
+          <option value="new">New Gemini Images (Offset 128px)</option>
+          <option value="classic">Classic Corner (Bottom-Right)</option>
+        </select>
       </div>
 
       <div id="img-dropzone" class="dropzone">
         <div class="dropzone-icon">
           <iconify-icon icon="ph:upload-simple-bold"></iconify-icon>
         </div>
-        <p class="dropzone-title">Click to upload or drag images here</p>
-        <p class="dropzone-sub">PNG, JPG, WebP</p>
+        <p class="dropzone-title">Upload or drag your Gemini Image</p>
+        <p class="dropzone-sub">Supports PNG, JPG, WebP</p>
         <input id="img-input" type="file" accept="image/*" class="hidden" />
       </div>
 
       <!-- Image Tuner & Live Preview Container -->
       <div id="img-tuner-container" class="tuner-container hidden">
         <div class="tuner-preview-row">
-          <div class="tuner-canvas-box">
-            <span class="text-xs font-bold mb-2">Preview (Full Frame)</span>
-            <canvas id="img-main-canvas"></canvas>
-          </div>
-          <div class="tuner-canvas-box" style="display: flex; flex-direction: column; gap: 1rem;">
-            <div>
-              <span class="text-xs font-bold mb-2 text-blue-600">Zoomed Original</span>
-              <canvas id="img-zoom-canvas" width="200" height="200" style="image-rendering: pixelated; display: block;"></canvas>
+          <div class="tuner-canvas-box main-box">
+            <span class="canvas-title">
+              <iconify-icon icon="ph:frame-corners-bold" width="14"></iconify-icon>
+              Preview (Full Frame)
+            </span>
+            <div class="canvas-wrapper">
+              <canvas id="img-main-canvas"></canvas>
             </div>
-            <div>
-              <span class="text-xs font-bold mb-2 text-green-600">Zoomed Cleaned</span>
-              <canvas id="img-zoom-cleaned-canvas" width="200" height="200" style="image-rendering: pixelated; display: block;"></canvas>
+          </div>
+          <div class="tuner-canvas-box zoom-box">
+            <div class="zoom-card">
+              <span class="canvas-title text-blue-600">
+                <iconify-icon icon="ph:magnifying-glass-plus-bold" width="14"></iconify-icon>
+                Zoomed Original
+              </span>
+              <div class="canvas-wrapper">
+                <canvas id="img-zoom-canvas" width="200" height="200"></canvas>
+              </div>
+            </div>
+            <div class="zoom-card">
+              <span class="canvas-title text-green-600">
+                <iconify-icon icon="ph:check-circle-bold" width="14"></iconify-icon>
+                Zoomed Cleaned
+              </span>
+              <div class="canvas-wrapper">
+                <canvas id="img-zoom-cleaned-canvas" width="200" height="200"></canvas>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="tuner-sliders mt-4">
-          <div>
+          <div class="slider-group">
             <div class="tuner-slider-label">
               <span>Strength (Gain)</span>
               <span id="lbl-img-gain">0.60x</span>
             </div>
             <input type="range" id="slider-img-gain" min="0.1" max="3" step="0.05" value="0.6" />
           </div>
-          <div>
+          <div class="slider-group">
             <div class="tuner-slider-label">
               <span>Size Scale</span>
               <span id="lbl-img-scale">1.00x</span>
             </div>
             <input type="range" id="slider-img-scale" min="0.5" max="2" step="0.05" value="1.0" />
           </div>
-          <div>
+          <div class="slider-group">
             <div class="tuner-slider-label">
               <span>Position X</span>
               <span id="lbl-img-offset-x">-128px</span>
             </div>
             <input type="range" id="slider-img-offset-x" min="-250" max="150" step="1" value="-128" />
           </div>
-          <div>
+          <div class="slider-group">
             <div class="tuner-slider-label">
               <span>Position Y</span>
               <span id="lbl-img-offset-y">-128px</span>
@@ -90,9 +143,13 @@
           </div>
         </div>
 
-        <div class="mt-4 text-center" style="display: flex; gap: 0.5rem; justify-content: center;">
-          <button id="btn-img-reset-sliders" class="btn btn-secondary text-xs">Reset Sliders</button>
-          <button id="btn-img-export" class="btn btn-primary font-bold">Remove &amp; Download Image</button>
+        <div class="tuner-actions">
+          <button id="btn-img-reset-sliders" class="btn btn-secondary text-xs">
+            <iconify-icon icon="ph:arrow-counter-clockwise-bold"></iconify-icon> Reset Sliders
+          </button>
+          <button id="btn-img-export" class="btn btn-primary font-bold">
+            <iconify-icon icon="ph:download-simple-bold"></iconify-icon> Remove &amp; Download Image
+          </button>
         </div>
       </div>
 
@@ -102,66 +159,82 @@
     <!-- Video Removal Panel -->
     <section id="panel-video" class="card hidden">
       <div class="preset-wrapper">
-        <label>
-          Watermark Position Preset:
-          <select id="video-preset">
-            <option value="veo">Gemini Veo Videos (Default)</option>
-            <option value="corner">Classic Corner</option>
-          </select>
+        <label for="video-preset" class="preset-label">
+          <iconify-icon icon="ph:sliders-horizontal-bold" width="16"></iconify-icon>
+          Watermark Preset:
         </label>
+        <select id="video-preset" class="preset-select">
+          <option value="veo">Gemini Veo Videos (Default)</option>
+          <option value="corner">Classic Corner</option>
+        </select>
       </div>
 
       <div id="video-dropzone" class="dropzone">
         <div class="dropzone-icon">
           <iconify-icon icon="ph:video-camera-bold"></iconify-icon>
         </div>
-        <p class="dropzone-title">Click to upload or drag a Gemini Veo video</p>
-        <p class="dropzone-sub">MP4, WebM, MOV</p>
+        <p class="dropzone-title">Upload or drag a Gemini Veo video</p>
+        <p class="dropzone-sub">Supports MP4, WebM, MOV</p>
         <input id="video-input" type="file" accept="video/*" class="hidden" />
       </div>
 
       <!-- Video Tuner & Live Preview Container -->
       <div id="video-tuner-container" class="tuner-container hidden">
         <div class="tuner-preview-row">
-          <div class="tuner-canvas-box">
-            <span class="text-xs font-bold mb-2">Preview (Full Frame)</span>
-            <canvas id="video-main-canvas"></canvas>
-          </div>
-          <div class="tuner-canvas-box" style="display: flex; flex-direction: column; gap: 1rem;">
-            <div>
-              <span class="text-xs font-bold mb-2 text-blue-600">Zoomed Original</span>
-              <canvas id="video-zoom-canvas" width="200" height="200" style="image-rendering: pixelated; display: block;"></canvas>
+          <div class="tuner-canvas-box main-box">
+            <span class="canvas-title">
+              <iconify-icon icon="ph:frame-corners-bold" width="14"></iconify-icon>
+              Preview (Full Frame)
+            </span>
+            <div class="canvas-wrapper">
+              <canvas id="video-main-canvas"></canvas>
             </div>
-            <div>
-              <span class="text-xs font-bold mb-2 text-green-600">Zoomed Cleaned</span>
-              <canvas id="video-zoom-cleaned-canvas" width="200" height="200" style="image-rendering: pixelated; display: block;"></canvas>
+          </div>
+          <div class="tuner-canvas-box zoom-box">
+            <div class="zoom-card">
+              <span class="canvas-title text-blue-600">
+                <iconify-icon icon="ph:magnifying-glass-plus-bold" width="14"></iconify-icon>
+                Zoomed Original
+              </span>
+              <div class="canvas-wrapper">
+                <canvas id="video-zoom-canvas" width="200" height="200"></canvas>
+              </div>
+            </div>
+            <div class="zoom-card">
+              <span class="canvas-title text-green-600">
+                <iconify-icon icon="ph:check-circle-bold" width="14"></iconify-icon>
+                Zoomed Cleaned
+              </span>
+              <div class="canvas-wrapper">
+                <canvas id="video-zoom-cleaned-canvas" width="200" height="200"></canvas>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="tuner-sliders mt-4">
-          <div>
+          <div class="slider-group">
             <div class="tuner-slider-label">
               <span>Strength (Gain)</span>
               <span id="lbl-video-gain">0.60x</span>
             </div>
             <input type="range" id="slider-video-gain" min="0.1" max="3" step="0.05" value="0.6" />
           </div>
-          <div>
+          <div class="slider-group">
             <div class="tuner-slider-label">
               <span>Size Scale</span>
               <span id="lbl-video-scale">1.00x</span>
             </div>
             <input type="range" id="slider-video-scale" min="0.5" max="2" step="0.05" value="1.0" />
           </div>
-          <div>
+          <div class="slider-group">
             <div class="tuner-slider-label">
               <span>Position X</span>
               <span id="lbl-video-offset-x">-24px</span>
             </div>
             <input type="range" id="slider-video-offset-x" min="-150" max="150" step="1" value="-24" />
           </div>
-          <div>
+          <div class="slider-group">
             <div class="tuner-slider-label">
               <span>Position Y</span>
               <span id="lbl-video-offset-y">-24px</span>
@@ -170,9 +243,13 @@
           </div>
         </div>
 
-        <div class="mt-4 text-center" style="display: flex; gap: 0.5rem; justify-content: center;">
-          <button id="btn-video-reset-sliders" class="btn btn-secondary text-xs">Reset Sliders</button>
-          <button id="btn-video-export" class="btn btn-primary font-bold">Remove &amp; Export Video MP4</button>
+        <div class="tuner-actions">
+          <button id="btn-video-reset-sliders" class="btn btn-secondary text-xs">
+            <iconify-icon icon="ph:arrow-counter-clockwise-bold"></iconify-icon> Reset Sliders
+          </button>
+          <button id="btn-video-export" class="btn btn-primary font-bold">
+            <iconify-icon icon="ph:sparkle-bold"></iconify-icon> Remove &amp; Export Video MP4
+          </button>
         </div>
       </div>
 
@@ -187,8 +264,15 @@
 
       <div id="video-results" class="hidden mt-4"></div>
     </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Precision mathematical alpha unblending for Gemini AI media.</p>
+      <p class="footer-sub">Zero server uploads • Processed entirely in your browser</p>
+    </footer>
   </main>
 
   <script src="./main.js"></script>
 </body>
+
 </html>
