@@ -1,12 +1,12 @@
 // ── 1. Engine Core (alphaMap, blendModes, geometry, tuner) ──
 function calculateAlphaMap(bgCaptureImageData) {
-    const { width, height, data } = bgCaptureImageData;
-    const alphaMap = new Float32Array(width * height);
-    for (let i = 0; i < alphaMap.length; i++) {
-        const idx = i * 4;
-        alphaMap[i] = Math.max(data[idx], data[idx + 1], data[idx + 2]) / 255.0;
-    }
-    return alphaMap;
+  const { width, height, data } = bgCaptureImageData;
+  const alphaMap = new Float32Array(width * height);
+  for (let i = 0; i < alphaMap.length; i++) {
+    const idx = i * 4;
+    alphaMap[i] = Math.max(data[idx], data[idx + 1], data[idx + 2]) / 255.0;
+  }
+  return alphaMap;
 }
 
 const ALPHA_THRESHOLD = 0.002;
@@ -14,94 +14,94 @@ const MAX_ALPHA = 0.99;
 const LOGO_VALUE = 255;
 
 function removeWatermark(imageData, alphaMap, position, options = {}) {
-    const { x, y, width, height } = position;
-    const gain = Number.isFinite(options.alphaGain) && options.alphaGain > 0
-        ? options.alphaGain
-        : 1;
+  const { x, y, width, height } = position;
+  const gain = Number.isFinite(options.alphaGain) && options.alphaGain > 0
+    ? options.alphaGain
+    : 1;
 
-    for (let row = 0; row < height; row++) {
-        for (let col = 0; col < width; col++) {
-            const imgIdx = ((y + row) * imageData.width + (x + col)) * 4;
-            const alphaIdx = row * width + col;
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const imgIdx = ((y + row) * imageData.width + (x + col)) * 4;
+      const alphaIdx = row * width + col;
 
-            let alpha = alphaMap[alphaIdx] * gain;
-            if (alpha < ALPHA_THRESHOLD) continue;
-            alpha = Math.min(alpha, MAX_ALPHA);
+      let alpha = alphaMap[alphaIdx] * gain;
+      if (alpha < ALPHA_THRESHOLD) continue;
+      alpha = Math.min(alpha, MAX_ALPHA);
 
-            for (let c = 0; c < 3; c++) {
-                const watermarked = imageData.data[imgIdx + c];
-                const original = (watermarked - alpha * LOGO_VALUE) / (1.0 - alpha);
-                imageData.data[imgIdx + c] = Math.max(0, Math.min(255, Math.round(original)));
-            }
-        }
+      for (let c = 0; c < 3; c++) {
+        const watermarked = imageData.data[imgIdx + c];
+        const original = (watermarked - alpha * LOGO_VALUE) / (1.0 - alpha);
+        imageData.data[imgIdx + c] = Math.max(0, Math.min(255, Math.round(original)));
+      }
     }
+  }
 }
 
 function getWatermarkInfo(width, height) {
-    const isLarge = width > 1024 && height > 1024;
-    const size = isLarge ? 96 : 48;
-    const margin = isLarge ? 64 : 32;
+  const isLarge = width > 1024 && height > 1024;
+  const size = isLarge ? 96 : 48;
+  const margin = isLarge ? 64 : 32;
 
-    return {
-        size,
-        x: width - margin - size,
-        y: height - margin - size,
-        width: size,
-        height: size,
-    };
+  return {
+    size,
+    x: width - margin - size,
+    y: height - margin - size,
+    width: size,
+    height: size,
+  };
 }
 
 function getRoi(width, height, wm) {
-    const pad = Math.round(wm.size * 0.6);
-    const rx = Math.max(0, wm.x - pad);
-    const ry = Math.max(0, wm.y - pad);
-    const rw = Math.min(width - rx, wm.width + pad * 2);
-    const rh = Math.min(height - ry, wm.height + pad * 2);
-    return { x: rx, y: ry, width: rw, height: rh };
+  const pad = Math.round(wm.size * 0.6);
+  const rx = Math.max(0, wm.x - pad);
+  const ry = Math.max(0, wm.y - pad);
+  const rw = Math.min(width - rx, wm.width + pad * 2);
+  const rh = Math.min(height - ry, wm.height + pad * 2);
+  return { x: rx, y: ry, width: rw, height: rh };
 }
 
 function resolveBox(base, width, height, opts = {}) {
-    const sizeScale = opts.sizeScale || 1;
-    const size = Math.max(8, Math.min(Math.round(base.size * sizeScale), Math.min(width, height)));
-    const x = Math.max(0, Math.min(base.x + Math.round(opts.offsetX || 0), width - size));
-    const y = Math.max(0, Math.min(base.y + Math.round(opts.offsetY || 0), height - size));
-    return { size, x, y, width: size, height: size };
+  const sizeScale = opts.sizeScale || 1;
+  const size = Math.max(8, Math.min(Math.round(base.size * sizeScale), Math.min(width, height)));
+  const x = Math.max(0, Math.min(base.x + Math.round(opts.offsetX || 0), width - size));
+  const y = Math.max(0, Math.min(base.y + Math.round(opts.offsetY || 0), height - size));
+  return { size, x, y, width: size, height: size };
 }
 
 function buildAlpha(bgImg, roi, wm, gain) {
-    const count = roi.width * roi.height;
-    const alphaMap = new Float32Array(count);
-    const offX = wm.x - roi.x;
-    const offY = wm.y - roi.y;
+  const count = roi.width * roi.height;
+  const alphaMap = new Float32Array(count);
+  const offX = wm.x - roi.x;
+  const offY = wm.y - roi.y;
 
-    const c = document.createElement('canvas');
-    c.width = wm.size; c.height = wm.size;
-    const cx = c.getContext('2d', { willReadFrequently: true });
-    cx.imageSmoothingEnabled = true;
-    cx.imageSmoothingQuality = 'high';
-    cx.drawImage(bgImg, 0, 0, wm.size, wm.size);
-    const data = cx.getImageData(0, 0, wm.size, wm.size).data;
+  const c = document.createElement('canvas');
+  c.width = wm.size; c.height = wm.size;
+  const cx = c.getContext('2d', { willReadFrequently: true });
+  cx.imageSmoothingEnabled = true;
+  cx.imageSmoothingQuality = 'high';
+  cx.drawImage(bgImg, 0, 0, wm.size, wm.size);
+  const data = cx.getImageData(0, 0, wm.size, wm.size).data;
 
-    for (let row = 0; row < wm.size; row++) {
-        for (let col = 0; col < wm.size; col++) {
-            const ri = (offY + row) * roi.width + (offX + col);
-            if (ri < 0 || ri >= count) continue;
-            const o = (row * wm.size + col) * 4;
-            const a = (Math.max(data[o], data[o + 1], data[o + 2]) / 255) * gain;
-            alphaMap[ri] = a > 0 ? Math.min(a, 0.99) : 0;
-        }
+  for (let row = 0; row < wm.size; row++) {
+    for (let col = 0; col < wm.size; col++) {
+      const ri = (offY + row) * roi.width + (offX + col);
+      if (ri < 0 || ri >= count) continue;
+      const o = (row * wm.size + col) * 4;
+      const a = (Math.max(data[o], data[o + 1], data[o + 2]) / 255) * gain;
+      alphaMap[ri] = a > 0 ? Math.min(a, 0.99) : 0;
     }
-    return alphaMap;
+  }
+  return alphaMap;
 }
 
 function cleanFrame(bgImg, imageData, width, height, base, opts = {}) {
-    const wm = resolveBox(base, width, height, opts);
-    const roi = getRoi(width, height, wm);
-    const alpha = buildAlpha(bgImg, roi, wm, opts.gain ?? 1);
-    removeWatermark(imageData, alpha, {
-        x: roi.x, y: roi.y, width: roi.width, height: roi.height,
-    });
-    return { wm, roi };
+  const wm = resolveBox(base, width, height, opts);
+  const roi = getRoi(width, height, wm);
+  const alpha = buildAlpha(bgImg, roi, wm, opts.gain ?? 1);
+  removeWatermark(imageData, alpha, {
+    x: roi.x, y: roi.y, width: roi.width, height: roi.height,
+  });
+  return { wm, roi };
 }
 
 // Inline Base64 Reference Images (guarantees zero CORS/Tainted Canvas errors when double clicked)
@@ -110,317 +110,317 @@ const BG_96_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIA
 
 // ── 2. WatermarkEngine Class ──
 class WatermarkEngine {
-    constructor(bg48, bg96) {
-        this.bg48 = bg48;
-        this.bg96 = bg96;
-        this.alphaMaps = {};
+  constructor(bg48, bg96) {
+    this.bg48 = bg48;
+    this.bg96 = bg96;
+    this.alphaMaps = {};
+  }
+
+  static async create() {
+    const loadImage = (src) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = (e) => reject(e);
+      img.src = src;
+    });
+
+    try {
+      const [bg48, bg96] = await Promise.all([
+        loadImage(BG_48_BASE64),
+        loadImage(BG_96_BASE64)
+      ]);
+      return new WatermarkEngine(bg48, bg96);
+    } catch (e) {
+      console.error("Failed to load watermark background assets.", e);
+      throw e;
     }
+  }
 
-    static async create() {
-        const loadImage = (src) => new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = (e) => reject(e);
-            img.src = src;
-        });
+  getWatermarkInfo(width, height) {
+    return getWatermarkInfo(width, height);
+  }
 
-        try {
-            const [bg48, bg96] = await Promise.all([
-                loadImage(BG_48_BASE64),
-                loadImage(BG_96_BASE64)
-            ]);
-            return new WatermarkEngine(bg48, bg96);
-        } catch (e) {
-            console.error("Failed to load watermark background assets.", e);
-            throw e;
-        }
-    }
+  async getAlphaMap(size) {
+    if (this.alphaMaps[size]) return this.alphaMaps[size];
 
-    getWatermarkInfo(width, height) {
-        return getWatermarkInfo(width, height);
-    }
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(size === 48 ? this.bg48 : this.bg96, 0, 0);
 
-    async getAlphaMap(size) {
-        if (this.alphaMaps[size]) return this.alphaMaps[size];
+    const map = calculateAlphaMap(ctx.getImageData(0, 0, size, size));
+    this.alphaMaps[size] = map;
+    return map;
+  }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = size; canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(size === 48 ? this.bg48 : this.bg96, 0, 0);
+  buildScaledAlphaMap(size) {
+    if (this.alphaMaps[size]) return this.alphaMaps[size];
 
-        const map = calculateAlphaMap(ctx.getImageData(0, 0, size, size));
-        this.alphaMaps[size] = map;
-        return map;
-    }
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.clearRect(0, 0, size, size);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(this.bg96, 0, 0, size, size);
 
-    buildScaledAlphaMap(size) {
-        if (this.alphaMaps[size]) return this.alphaMaps[size];
+    const map = calculateAlphaMap(ctx.getImageData(0, 0, size, size));
+    this.alphaMaps[size] = map;
+    return map;
+  }
 
-        const canvas = document.createElement('canvas');
-        canvas.width = size; canvas.height = size;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.clearRect(0, 0, size, size);
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(this.bg96, 0, 0, size, size);
+  async process(imageFile) {
+    const objectUrl = URL.createObjectURL(imageFile);
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = objectUrl;
+    });
 
-        const map = calculateAlphaMap(ctx.getImageData(0, 0, size, size));
-        this.alphaMaps[size] = map;
-        return map;
-    }
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
 
-    async process(imageFile) {
-        const objectUrl = URL.createObjectURL(imageFile);
-        const img = await new Promise((resolve, reject) => {
-            const i = new Image();
-            i.onload = () => resolve(i); 
-            i.onerror = reject;
-            i.src = objectUrl;
-        });
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const config = this.getWatermarkInfo(canvas.width, canvas.height);
 
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const config = this.getWatermarkInfo(canvas.width, canvas.height);
-        
-        const alphaMap = await this.getAlphaMap(config.size);
-        removeWatermark(imageData, alphaMap, config);
-        
-        ctx.putImageData(imageData, 0, 0);
-        
-        return {
-            blob: await new Promise(r => canvas.toBlob(r, 'image/png')),
-            originalSrc: objectUrl,
-            width: img.width,
-            height: img.height
-        };
-    }
+    const alphaMap = await this.getAlphaMap(config.size);
+    removeWatermark(imageData, alphaMap, config);
 
-    async prepareForSize(width, height) {
-        const config = this.getWatermarkInfo(width, height);
-        const alphaMap = await this.getAlphaMap(config.size);
-        return { config, alphaMap };
-    }
+    ctx.putImageData(imageData, 0, 0);
 
-    removeFromImageData(imageData, prepared) {
-        const { config, alphaMap } = prepared || this._sync(imageData.width, imageData.height);
-        removeWatermark(imageData, alphaMap, config);
-        return imageData;
-    }
+    return {
+      blob: await new Promise(r => canvas.toBlob(r, 'image/png')),
+      originalSrc: objectUrl,
+      width: img.width,
+      height: img.height
+    };
+  }
 
-    _sync(width, height) {
-        const config = this.getWatermarkInfo(width, height);
-        return { config, alphaMap: this.alphaMaps[config.size] };
-    }
+  async prepareForSize(width, height) {
+    const config = this.getWatermarkInfo(width, height);
+    const alphaMap = await this.getAlphaMap(config.size);
+    return { config, alphaMap };
+  }
+
+  removeFromImageData(imageData, prepared) {
+    const { config, alphaMap } = prepared || this._sync(imageData.width, imageData.height);
+    removeWatermark(imageData, alphaMap, config);
+    return imageData;
+  }
+
+  _sync(width, height) {
+    const config = this.getWatermarkInfo(width, height);
+    return { config, alphaMap: this.alphaMaps[config.size] };
+  }
 }
 
 // ── 3. VideoWatermarkEngine Class ──
 const VIDEO_DEFAULTS = { gain: 1.0, offsetX: -24, offsetY: -24, sizeScale: 1 };
 
 class VideoWatermarkEngine {
-    constructor(engine) {
-        this.engine = engine;
-        this._mb = null;
+  constructor(engine) {
+    this.engine = engine;
+    this._mb = null;
+  }
+
+  static async create() {
+    const engine = await WatermarkEngine.create();
+    return new VideoWatermarkEngine(engine);
+  }
+
+  static isSupported() {
+    return (
+      typeof VideoEncoder !== 'undefined' &&
+      typeof VideoDecoder !== 'undefined'
+    );
+  }
+
+  async _lib() {
+    if (!this._mb) this._mb = await import('https://cdn.jsdelivr.net/npm/mediabunny@1.52.3/+esm');
+    return this._mb;
+  }
+
+  get sparkleImage() {
+    return this.engine.bg96;
+  }
+
+  getVeoWatermark(width, height) {
+    const base = Math.min(width, height);
+    const size = Math.max(24, Math.min(Math.round(base / 15), base));
+    const margin = Math.round(base / 10);
+    return {
+      size,
+      x: Math.max(0, width - margin - size),
+      y: Math.max(0, height - margin - size),
+      width: size,
+      height: size,
+    };
+  }
+
+  previewClean(fullImageData, width, height, opts = {}) {
+    const base = this.getVeoWatermark(width, height);
+    return cleanFrame(this.engine.bg96, fullImageData, width, height, base, {
+      ...opts,
+      gain: opts.gain ?? VIDEO_DEFAULTS.gain,
+    });
+  }
+
+  async process(file, opts = {}) {
+    const onProgress = opts.onProgress || (() => { });
+    const gain = opts.gain ?? VIDEO_DEFAULTS.gain;
+
+    const mb = await this._lib();
+    const {
+      ALL_FORMATS, BlobSource, BufferTarget, CanvasSource,
+      EncodedAudioPacketSource, EncodedPacketSink, Input,
+      Mp4OutputFormat, Output, QUALITY_HIGH, VideoSampleSink, canEncodeVideo,
+    } = mb;
+
+    if (canEncodeVideo && !(await canEncodeVideo('avc'))) {
+      throw new Error(
+        'Your browser cannot encode H.264 video locally. Please try Chrome or Edge desktop.'
+      );
     }
 
-    static async create() {
-        const engine = await WatermarkEngine.create();
-        return new VideoWatermarkEngine(engine);
+    const originalUrl = URL.createObjectURL(file);
+    const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+
+    const videoTrack = await input.getPrimaryVideoTrack();
+    if (!videoTrack) {
+      input.dispose?.();
+      URL.revokeObjectURL(originalUrl);
+      throw new Error('No decodable video track found.');
     }
 
-    static isSupported() {
-        return (
-            typeof VideoEncoder !== 'undefined' &&
-            typeof VideoDecoder !== 'undefined'
-        );
-    }
+    const width = videoTrack.displayWidth ?? videoTrack.codedWidth;
+    const height = videoTrack.displayHeight ?? videoTrack.codedHeight;
+    const duration = await input.computeDuration().catch(() => 0);
 
-    async _lib() {
-        if (!this._mb) this._mb = await import('https://cdn.jsdelivr.net/npm/mediabunny@1.52.3/+esm');
-        return this._mb;
-    }
+    let frameRate = 30;
+    try {
+      const stats = await videoTrack.computePacketStats(120);
+      if (stats?.averagePacketRate) frameRate = Math.round(stats.averagePacketRate);
+    } catch { }
 
-    get sparkleImage() {
-        return this.engine.bg96;
-    }
+    const base = opts.mode === 'gemini' ? getWatermarkInfo(width, height) : this.getVeoWatermark(width, height);
+    const wm = resolveBox(base, width, height, opts);
+    const roi = getRoi(width, height, wm);
+    const alpha = buildAlpha(this.engine.bg96, roi, wm, gain);
+    const region = { x: 0, y: 0, width: roi.width, height: roi.height };
 
-    getVeoWatermark(width, height) {
-        const base = Math.min(width, height);
-        const size = Math.max(24, Math.min(Math.round(base / 15), base));
-        const margin = Math.round(base / 10);
-        return {
-            size,
-            x: Math.max(0, width - margin - size),
-            y: Math.max(0, height - margin - size),
-            width: size,
-            height: size,
-        };
-    }
+    const canvas = Object.assign(document.createElement('canvas'), { width, height });
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
-    previewClean(fullImageData, width, height, opts = {}) {
-        const base = this.getVeoWatermark(width, height);
-        return cleanFrame(this.engine.bg96, fullImageData, width, height, base, {
-            ...opts,
-            gain: opts.gain ?? VIDEO_DEFAULTS.gain,
-        });
-    }
+    const target = new BufferTarget();
+    const output = new Output({ format: new Mp4OutputFormat(), target });
+    const videoSource = new CanvasSource(canvas, {
+      codec: 'avc',
+      bitrate: QUALITY_HIGH,
+      keyFrameInterval: 2,
+      sizeChangeBehavior: 'passThrough',
+    });
+    output.addVideoTrack(videoSource, { frameRate });
 
-    async process(file, opts = {}) {
-        const onProgress = opts.onProgress || (() => {});
-        const gain = opts.gain ?? VIDEO_DEFAULTS.gain;
-
-        const mb = await this._lib();
-        const {
-            ALL_FORMATS, BlobSource, BufferTarget, CanvasSource,
-            EncodedAudioPacketSource, EncodedPacketSink, Input,
-            Mp4OutputFormat, Output, QUALITY_HIGH, VideoSampleSink, canEncodeVideo,
-        } = mb;
-
-        if (canEncodeVideo && !(await canEncodeVideo('avc'))) {
-            throw new Error(
-                'Your browser cannot encode H.264 video locally. Please try Chrome or Edge desktop.'
-            );
+    let audioSource = null;
+    let audioTrack = null;
+    let audioDecoderConfig = null;
+    try {
+      audioTrack = await input.getPrimaryAudioTrack();
+      if (audioTrack) {
+        const audioCodec = await audioTrack.getCodec();
+        audioDecoderConfig = await audioTrack.getDecoderConfig().catch(() => null);
+        if (audioCodec && audioDecoderConfig) {
+          audioSource = new EncodedAudioPacketSource(audioCodec);
+          output.addAudioTrack(audioSource);
         }
-
-        const originalUrl = URL.createObjectURL(file);
-        const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
-
-        const videoTrack = await input.getPrimaryVideoTrack();
-        if (!videoTrack) {
-            input.dispose?.();
-            URL.revokeObjectURL(originalUrl);
-            throw new Error('No decodable video track found.');
-        }
-
-        const width = videoTrack.displayWidth ?? videoTrack.codedWidth;
-        const height = videoTrack.displayHeight ?? videoTrack.codedHeight;
-        const duration = await input.computeDuration().catch(() => 0);
-
-        let frameRate = 30;
-        try {
-            const stats = await videoTrack.computePacketStats(120);
-            if (stats?.averagePacketRate) frameRate = Math.round(stats.averagePacketRate);
-        } catch {}
-
-        const base = opts.mode === 'gemini' ? getWatermarkInfo(width, height) : this.getVeoWatermark(width, height);
-        const wm = resolveBox(base, width, height, opts);
-        const roi = getRoi(width, height, wm);
-        const alpha = buildAlpha(this.engine.bg96, roi, wm, gain);
-        const region = { x: 0, y: 0, width: roi.width, height: roi.height };
-
-        const canvas = Object.assign(document.createElement('canvas'), { width, height });
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-        const target = new BufferTarget();
-        const output = new Output({ format: new Mp4OutputFormat(), target });
-        const videoSource = new CanvasSource(canvas, {
-            codec: 'avc',
-            bitrate: QUALITY_HIGH,
-            keyFrameInterval: 2,
-            sizeChangeBehavior: 'passThrough',
-        });
-        output.addVideoTrack(videoSource, { frameRate });
-
-        let audioSource = null;
-        let audioTrack = null;
-        let audioDecoderConfig = null;
-        try {
-            audioTrack = await input.getPrimaryAudioTrack();
-            if (audioTrack) {
-                const audioCodec = await audioTrack.getCodec();
-                audioDecoderConfig = await audioTrack.getDecoderConfig().catch(() => null);
-                if (audioCodec && audioDecoderConfig) {
-                    audioSource = new EncodedAudioPacketSource(audioCodec);
-                    output.addAudioTrack(audioSource);
-                }
-            }
-        } catch {
-            audioSource = null;
-        }
-
-        await output.start();
-
-        const fallbackDur = frameRate > 0 ? 1 / frameRate : 1 / 30;
-        const sink = new VideoSampleSink(videoTrack);
-        let firstTimestamp = null;
-        let lastTimestamp = -1;
-        for await (const sample of sink.samples()) {
-            if (firstTimestamp === null) firstTimestamp = sample.timestamp;
-            let timestamp = sample.timestamp - firstTimestamp;
-            if (!(timestamp >= 0)) timestamp = 0;
-            if (timestamp <= lastTimestamp) timestamp = lastTimestamp + fallbackDur;
-            const dur = Number.isFinite(sample.duration) && sample.duration > 0 ? sample.duration : fallbackDur;
-            lastTimestamp = timestamp;
-
-            sample.draw(ctx, 0, 0, width, height);
-            sample.close();
-
-            const px = ctx.getImageData(roi.x, roi.y, roi.width, roi.height);
-            removeWatermark(px, alpha, region);
-            
-            // Force GPU texture sync for WebCodecs by using ImageBitmap
-            const bmp = await createImageBitmap(px);
-            ctx.drawImage(bmp, roi.x, roi.y);
-            bmp.close();
-
-            await videoSource.add(timestamp, dur);
-            if (duration) onProgress({ progress: Math.min(0.99, timestamp / duration) });
-        }
-        videoSource.close();
-
-        if (audioSource) {
-            try {
-                const offset = firstTimestamp ?? 0;
-                const aSink = new EncodedPacketSink(audioTrack);
-                let isFirstAudio = true;
-                let lastAudioTs = -1;
-                for await (const packet of aSink.packets()) {
-                    let newTs = packet.timestamp - offset;
-                    if (newTs < 0) continue;
-                    if (newTs <= lastAudioTs) newTs = lastAudioTs + 1e-6;
-                    lastAudioTs = newTs;
-                    let outPacket = packet;
-                    if (newTs !== packet.timestamp && typeof packet.clone === 'function') {
-                        outPacket = packet.clone({ timestamp: newTs });
-                    }
-                    await audioSource.add(
-                        outPacket,
-                        isFirstAudio && audioDecoderConfig ? { decoderConfig: audioDecoderConfig } : undefined
-                    );
-                    isFirstAudio = false;
-                }
-            } catch (e) {
-                console.warn('Audio passthrough failed.', e);
-            } finally {
-                audioSource.close();
-            }
-        }
-
-        await output.finalize();
-        input.dispose?.();
-
-        if (!target.buffer) {
-            URL.revokeObjectURL(originalUrl);
-            throw new Error('Video export produced no output.');
-        }
-
-        const blob = new Blob([target.buffer], { type: 'video/mp4' });
-        onProgress({ progress: 1 });
-
-        return {
-            blob,
-            url: URL.createObjectURL(blob),
-            originalUrl,
-            ext: 'mp4',
-            mime: 'video/mp4',
-            width,
-            height,
-        };
+      }
+    } catch {
+      audioSource = null;
     }
+
+    await output.start();
+
+    const fallbackDur = frameRate > 0 ? 1 / frameRate : 1 / 30;
+    const sink = new VideoSampleSink(videoTrack);
+    let firstTimestamp = null;
+    let lastTimestamp = -1;
+    for await (const sample of sink.samples()) {
+      if (firstTimestamp === null) firstTimestamp = sample.timestamp;
+      let timestamp = sample.timestamp - firstTimestamp;
+      if (!(timestamp >= 0)) timestamp = 0;
+      if (timestamp <= lastTimestamp) timestamp = lastTimestamp + fallbackDur;
+      const dur = Number.isFinite(sample.duration) && sample.duration > 0 ? sample.duration : fallbackDur;
+      lastTimestamp = timestamp;
+
+      sample.draw(ctx, 0, 0, width, height);
+      sample.close();
+
+      const px = ctx.getImageData(roi.x, roi.y, roi.width, roi.height);
+      removeWatermark(px, alpha, region);
+
+      // Force GPU texture sync for WebCodecs by using ImageBitmap
+      const bmp = await createImageBitmap(px);
+      ctx.drawImage(bmp, roi.x, roi.y);
+      bmp.close();
+
+      await videoSource.add(timestamp, dur);
+      if (duration) onProgress({ progress: Math.min(0.99, timestamp / duration) });
+    }
+    videoSource.close();
+
+    if (audioSource) {
+      try {
+        const offset = firstTimestamp ?? 0;
+        const aSink = new EncodedPacketSink(audioTrack);
+        let isFirstAudio = true;
+        let lastAudioTs = -1;
+        for await (const packet of aSink.packets()) {
+          let newTs = packet.timestamp - offset;
+          if (newTs < 0) continue;
+          if (newTs <= lastAudioTs) newTs = lastAudioTs + 1e-6;
+          lastAudioTs = newTs;
+          let outPacket = packet;
+          if (newTs !== packet.timestamp && typeof packet.clone === 'function') {
+            outPacket = packet.clone({ timestamp: newTs });
+          }
+          await audioSource.add(
+            outPacket,
+            isFirstAudio && audioDecoderConfig ? { decoderConfig: audioDecoderConfig } : undefined
+          );
+          isFirstAudio = false;
+        }
+      } catch (e) {
+        console.warn('Audio passthrough failed.', e);
+      } finally {
+        audioSource.close();
+      }
+    }
+
+    await output.finalize();
+    input.dispose?.();
+
+    if (!target.buffer) {
+      URL.revokeObjectURL(originalUrl);
+      throw new Error('Video export produced no output.');
+    }
+
+    const blob = new Blob([target.buffer], { type: 'video/mp4' });
+    onProgress({ progress: 1 });
+
+    return {
+      blob,
+      url: URL.createObjectURL(blob),
+      originalUrl,
+      ext: 'mp4',
+      mime: 'video/mp4',
+      width,
+      height,
+    };
+  }
 }
 
 // ── 4. App Controller & Event Handlers ──
@@ -461,6 +461,7 @@ function initTabs() {
   function switchTab(target) {
     if (target === 'image') {
       currentTab = 'image';
+      try { sessionStorage.setItem('activeTab', 'image'); } catch (e) {}
       tabImage.classList.add('active');
       tabVideo.classList.remove('active');
       panelImage.style.display = 'block';
@@ -469,6 +470,7 @@ function initTabs() {
       panelVideo.classList.add('hidden');
     } else {
       currentTab = 'video';
+      try { sessionStorage.setItem('activeTab', 'video'); } catch (e) {}
       tabVideo.classList.add('active');
       tabImage.classList.remove('active');
       panelVideo.style.display = 'block';
@@ -487,6 +489,15 @@ function initTabs() {
     e.preventDefault();
     switchTab('video');
   };
+
+  try {
+    const savedTab = sessionStorage.getItem('activeTab');
+    if (savedTab === 'video') {
+      switchTab('video');
+    } else if (savedTab === 'image') {
+      switchTab('image');
+    }
+  } catch (e) {}
 }
 
 function initImageRemover() {
@@ -631,9 +642,9 @@ function initImageRemover() {
       const zctx = zoomCanvas.getContext('2d');
       zctx.imageSmoothingEnabled = false;
       zctx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
-      
+
       zctx.drawImage(currentOriginalBitmap, roi.x, roi.y, roi.width, roi.height, 0, 0, zoomCanvas.width, zoomCanvas.height);
-      
+
       const sx = zoomCanvas.width / roi.width;
       const sy = zoomCanvas.height / roi.height;
       zctx.strokeStyle = '#2563eb';
@@ -645,9 +656,9 @@ function initImageRemover() {
       const zctx = zoomCleanedCanvas.getContext('2d');
       zctx.imageSmoothingEnabled = false;
       zctx.clearRect(0, 0, zoomCleanedCanvas.width, zoomCleanedCanvas.height);
-      
+
       zctx.drawImage(offscreen, roi.x, roi.y, roi.width, roi.height, 0, 0, zoomCleanedCanvas.width, zoomCleanedCanvas.height);
-      
+
       const sx = zoomCleanedCanvas.width / roi.width;
       const sy = zoomCleanedCanvas.height / roi.height;
       zctx.strokeStyle = '#16a34a';
@@ -694,7 +705,7 @@ function initImageRemover() {
       const { width, height, imageData } = currentPreviewFrame;
       const copy = new ImageData(new Uint8ClampedArray(imageData.data), width, height);
       cleanFrame(watermarkEngine.bg96, copy, width, height, currentBase, currentSettings);
-      
+
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
@@ -710,13 +721,13 @@ function initImageRemover() {
           <h3 class="font-bold text-center mb-4">Image Watermark Cleaned Successfully!</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p class="font-bold text-xs mb-2">Original (${width}x${height}px)</p>
+              <p class="text-xs mb-2">Original (${width}x${height}px)</p>
               <div class="checker p-2 text-center">
                 <img src="${originalUrl}" style="max-height: 250px; margin: 0 auto; object-fit: contain; width: 100%;" />
               </div>
             </div>
             <div>
-              <p class="font-bold text-xs mb-2 text-green-600">Cleaned Result</p>
+              <p class="text-xs mb-2 text-green-600">Cleaned Result</p>
               <div class="checker p-2 text-center">
                 <img src="${url}" style="max-height: 250px; margin: 0 auto; object-fit: contain; width: 100%;" />
               </div>
@@ -968,11 +979,11 @@ function initVideoRemover() {
           <h3 class="font-bold text-center mb-4">Video Watermark Cleaned Successfully!</h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <p class="font-bold text-xs mb-2">Original Video</p>
+              <p class="text-xs mb-2">Original Video</p>
               <video src="${res.originalUrl}" controls playsinline style="width:100%; max-height:280px;"></video>
             </div>
             <div>
-              <p class="font-bold text-xs mb-2 text-green-600">Cleaned Video</p>
+              <p class="text-xs mb-2 text-green-600">Cleaned Video</p>
               <video src="${res.url}" controls playsinline style="width:100%; max-height:280px;"></video>
             </div>
           </div>
@@ -1009,5 +1020,50 @@ async function fetchGitHubStars() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', fetchGitHubStars);
+document.addEventListener('DOMContentLoaded', () => {
+  fetchGitHubStars();
+  initCustomSelects();
+});
 fetchGitHubStars();
+
+// ── Custom Select Component Logic ──
+function initCustomSelects() {
+  document.querySelectorAll('.custom-select').forEach((selectEl) => {
+    const targetId = selectEl.getAttribute('data-select-target');
+    const nativeSelect = document.getElementById(targetId);
+    if (!nativeSelect) return;
+
+    const trigger = selectEl.querySelector('.custom-select-trigger');
+    const valueDisplay = selectEl.querySelector('.custom-select-value');
+    const options = selectEl.querySelectorAll('.custom-option');
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.custom-select.open').forEach((other) => {
+        if (other !== selectEl) other.classList.remove('open');
+      });
+      selectEl.classList.toggle('open');
+    });
+
+    options.forEach((opt) => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const val = opt.getAttribute('data-value');
+        const text = opt.querySelector('.option-title').textContent;
+
+        valueDisplay.textContent = text;
+        options.forEach((o) => o.classList.remove('selected'));
+        opt.classList.add('selected');
+
+        nativeSelect.value = val;
+        nativeSelect.dispatchEvent(new Event('change'));
+
+        selectEl.classList.remove('open');
+      });
+    });
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.custom-select.open').forEach((s) => s.classList.remove('open'));
+  });
+}

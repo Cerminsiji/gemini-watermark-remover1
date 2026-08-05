@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gemini Watermark Remover | AI Image & Veo Video Cleaner</title>
+  <title>Free Gemini Video & Image Watermark Remover Online - No Quality Loss</title>
   <meta name="description"
-    content="Clean and remove Google Gemini AI watermarks from images and Veo videos instantly in your browser." />
+    content="Free online tool to remove Google Gemini sparkles watermark and logos from both videos and images instantly. 100% safe, fast, and processed inside your browser." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -44,6 +44,16 @@
   </header>
 
   <main class="container">
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <h1 class="hero-title">Free Gemini &amp; Veo 3 AI Watermark Remover Online</h1>
+      <p class="hero-description">
+        Easily remove Google Gemini sparkles and Veo 3 AI logos from your
+        <strong style="color: #64748b">videos and images</strong>. 100% free, secure, and processed completely inside
+        your browser with <strong style="color: #64748b;">no quality loss</strong>.
+      </p>
+    </div>
+
     <!-- Tab Switcher -->
     <div class="tab-container">
       <button id="tab-image" class="tab-btn active">
@@ -51,21 +61,37 @@
         <span>Image Remover</span>
       </button>
       <button id="tab-video" class="tab-btn">
-        <iconify-icon icon="ph:video-camera-bold" width="18"></iconify-icon>
+        <iconify-icon icon="ph:video-bold" width="18"></iconify-icon>
         <span>Video Remover</span>
       </button>
     </div>
 
     <!-- Image Removal Panel -->
     <section id="panel-image" class="card">
-      <div class="preset-wrapper">
-        <label for="img-preset" class="preset-label">
+      <div class="custom-select-wrapper">
+        <label class="preset-label">
           <iconify-icon icon="ph:sliders-horizontal-bold" width="16"></iconify-icon>
           Watermark Preset:
         </label>
-        <select id="img-preset" class="preset-select">
-          <option value="new">New Gemini Images (Offset 128px)</option>
-          <option value="classic">Classic Corner (Bottom-Right)</option>
+        <div class="custom-select" data-select-target="img-preset">
+          <button type="button" class="custom-select-trigger">
+            <span class="custom-select-value">New Gemini Images</span>
+            <iconify-icon icon="ph:caret-down-bold" class="custom-select-arrow" width="14"></iconify-icon>
+          </button>
+          <div class="custom-select-options">
+            <div class="custom-option selected" data-value="new">
+              <span class="option-title">New Gemini Images</span>
+              <iconify-icon icon="ph:check-bold" class="option-check" width="14"></iconify-icon>
+            </div>
+            <div class="custom-option" data-value="classic">
+              <span class="option-title">Classic Corner</span>
+              <iconify-icon icon="ph:check-bold" class="option-check" width="14"></iconify-icon>
+            </div>
+          </div>
+        </div>
+        <select id="img-preset" class="hidden">
+          <option value="new">New Gemini Images</option>
+          <option value="classic">Classic Corner</option>
         </select>
       </div>
 
@@ -83,7 +109,7 @@
         <div class="tuner-preview-row">
           <div class="tuner-canvas-box main-box">
             <span class="canvas-title">
-              <iconify-icon icon="ph:frame-corners-bold" width="14"></iconify-icon>
+              <iconify-icon icon="ph:frame-corners" width="14"></iconify-icon>
               Preview (Full Frame)
             </span>
             <div class="canvas-wrapper">
@@ -93,7 +119,7 @@
           <div class="tuner-canvas-box zoom-box">
             <div class="zoom-card">
               <span class="canvas-title text-blue-600">
-                <iconify-icon icon="ph:magnifying-glass-plus-bold" width="14"></iconify-icon>
+                <iconify-icon icon="ph:magnifying-glass-plus" width="14"></iconify-icon>
                 Zoomed Original
               </span>
               <div class="canvas-wrapper">
@@ -102,7 +128,7 @@
             </div>
             <div class="zoom-card">
               <span class="canvas-title text-green-600">
-                <iconify-icon icon="ph:check-circle-bold" width="14"></iconify-icon>
+                <iconify-icon icon="ph:check-circle" width="14"></iconify-icon>
                 Zoomed Cleaned
               </span>
               <div class="canvas-wrapper">
@@ -145,10 +171,10 @@
 
         <div class="tuner-actions">
           <button id="btn-img-reset-sliders" class="btn btn-secondary text-xs">
-            <iconify-icon icon="ph:arrow-counter-clockwise-bold"></iconify-icon> Reset Sliders
+            <iconify-icon icon="ph:arrow-counter-clockwise"></iconify-icon> Reset Sliders
           </button>
-          <button id="btn-img-export" class="btn btn-primary font-bold">
-            <iconify-icon icon="ph:download-simple-bold"></iconify-icon> Remove &amp; Download Image
+          <button id="btn-img-export" class="btn btn-primary">
+            <iconify-icon icon="ph:eraser"></iconify-icon> Remove &amp; Export Image
           </button>
         </div>
       </div>
@@ -158,22 +184,38 @@
 
     <!-- Video Removal Panel -->
     <section id="panel-video" class="card hidden">
-      <div class="preset-wrapper">
-        <label for="video-preset" class="preset-label">
+      <div class="custom-select-wrapper">
+        <label class="preset-label">
           <iconify-icon icon="ph:sliders-horizontal-bold" width="16"></iconify-icon>
           Watermark Preset:
         </label>
-        <select id="video-preset" class="preset-select">
-          <option value="veo">Gemini Veo Videos (Default)</option>
+        <div class="custom-select" data-select-target="video-preset">
+          <button type="button" class="custom-select-trigger">
+            <span class="custom-select-value">New Gemini Veo Videos</span>
+            <iconify-icon icon="ph:caret-down-bold" class="custom-select-arrow" width="14"></iconify-icon>
+          </button>
+          <div class="custom-select-options">
+            <div class="custom-option selected" data-value="veo">
+              <span class="option-title">New Gemini Veo Videos</span>
+              <iconify-icon icon="ph:check-bold" class="option-check" width="14"></iconify-icon>
+            </div>
+            <div class="custom-option" data-value="corner">
+              <span class="option-title">Classic Corner</span>
+              <iconify-icon icon="ph:check-bold" class="option-check" width="14"></iconify-icon>
+            </div>
+          </div>
+        </div>
+        <select id="video-preset" class="hidden">
+          <option value="veo">New Gemini Veo Videos</option>
           <option value="corner">Classic Corner</option>
         </select>
       </div>
 
       <div id="video-dropzone" class="dropzone">
         <div class="dropzone-icon">
-          <iconify-icon icon="ph:video-camera-bold"></iconify-icon>
+          <iconify-icon icon="ph:video-bold"></iconify-icon>
         </div>
-        <p class="dropzone-title">Upload or drag a Gemini Veo video</p>
+        <p class="dropzone-title">Upload or drag a Gemini Veo 3 video</p>
         <p class="dropzone-sub">Supports MP4, WebM, MOV</p>
         <input id="video-input" type="file" accept="video/*" class="hidden" />
       </div>
@@ -183,7 +225,7 @@
         <div class="tuner-preview-row">
           <div class="tuner-canvas-box main-box">
             <span class="canvas-title">
-              <iconify-icon icon="ph:frame-corners-bold" width="14"></iconify-icon>
+              <iconify-icon icon="ph:frame-corners" width="14"></iconify-icon>
               Preview (Full Frame)
             </span>
             <div class="canvas-wrapper">
@@ -193,7 +235,7 @@
           <div class="tuner-canvas-box zoom-box">
             <div class="zoom-card">
               <span class="canvas-title text-blue-600">
-                <iconify-icon icon="ph:magnifying-glass-plus-bold" width="14"></iconify-icon>
+                <iconify-icon icon="ph:magnifying-glass-plus" width="14"></iconify-icon>
                 Zoomed Original
               </span>
               <div class="canvas-wrapper">
@@ -202,7 +244,7 @@
             </div>
             <div class="zoom-card">
               <span class="canvas-title text-green-600">
-                <iconify-icon icon="ph:check-circle-bold" width="14"></iconify-icon>
+                <iconify-icon icon="ph:check-circle" width="14"></iconify-icon>
                 Zoomed Cleaned
               </span>
               <div class="canvas-wrapper">
@@ -245,17 +287,17 @@
 
         <div class="tuner-actions">
           <button id="btn-video-reset-sliders" class="btn btn-secondary text-xs">
-            <iconify-icon icon="ph:arrow-counter-clockwise-bold"></iconify-icon> Reset Sliders
+            <iconify-icon icon="ph:arrow-counter-clockwise"></iconify-icon> Reset Sliders
           </button>
-          <button id="btn-video-export" class="btn btn-primary font-bold">
-            <iconify-icon icon="ph:sparkle-bold"></iconify-icon> Remove &amp; Export Video MP4
+          <button id="btn-video-export" class="btn btn-primary">
+            <iconify-icon icon="ph:eraser"></iconify-icon> Remove &amp; Export Video MP4
           </button>
         </div>
       </div>
 
       <!-- Processing Progress -->
       <div id="video-status" class="hidden mt-4 text-center">
-        <p class="font-bold mb-2">Cleaning &amp; Encoding Video...</p>
+        <p class="mb-2">Cleaning &amp; Encoding Video...</p>
         <div class="progress-bar-container">
           <div id="video-progress-bar" class="progress-bar-fill"></div>
         </div>
@@ -263,6 +305,43 @@
       </div>
 
       <div id="video-results" class="hidden mt-4"></div>
+    <!-- How It Works Step-by-Step Section -->
+    <section class="how-it-works-section">
+      <h2 class="section-title">How to Remove Gemini Watermarks</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-badge">1</div>
+          <div class="step-icon">
+            <iconify-icon icon="ph:upload-simple" width="26"></iconify-icon>
+          </div>
+          <h3 class="step-title">Upload Media</h3>
+          <p class="step-desc">
+            Select or drag &amp; drop your Google Gemini generated image or Veo 3 video into the tool.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">2</div>
+          <div class="step-icon">
+            <iconify-icon icon="ph:sliders-horizontal" width="26"></iconify-icon>
+          </div>
+          <h3 class="step-title">Adjust &amp; Align</h3>
+          <p class="step-desc">
+            Fine-tune the size and position sliders. Use the dual zoomed preview corners for pixel-perfect alignment.
+          </p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-badge">3</div>
+          <div class="step-icon">
+            <iconify-icon icon="ph:download-simple" width="26"></iconify-icon>
+          </div>
+          <h3 class="step-title">Export Clean Media</h3>
+          <p class="step-desc">
+            Click Remove &amp; Export to generate your watermark-free file locally in your browser with zero quality loss.
+          </p>
+        </div>
+      </div>
     </section>
 
     <!-- Footer -->
