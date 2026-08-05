@@ -142,6 +142,7 @@ body {
 
 /* ── Main Container ── */
 .container {
+  position: relative;
   width: 100%;
   max-width: 1000px;
   margin: 0 auto;
@@ -151,8 +152,10 @@ body {
 
 /* ── Hero Section ── */
 .hero-section {
+  position: relative;
+  z-index: 3;
   text-align: center;
-  margin: 2rem auto 2rem;
+  margin: 2rem auto 2.5rem;
   max-width: 900px;
 }
 
@@ -173,8 +176,67 @@ body {
   margin: 0 auto;
 }
 
+/* ── Decorative Background Showcase Frames ── */
+.hero-bg-frame-container {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hero-bg-frame-container.left {
+  top: 180px;
+  left: -10%;
+  width: 250px;
+  height: 250px;
+}
+
+.hero-bg-frame-container.left .hero-bg-frame {
+  transform: rotate(-6deg);
+}
+
+.hero-bg-frame-container.right {
+  top: 220px;
+  right: -18%;
+  left: auto;
+  width: 350px;
+  height: 350px;
+}
+
+.hero-bg-frame-container.right .hero-bg-frame {
+  transform: rotate(6deg);
+}
+
+.hero-bg-frame {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 2.6rem;
+  border: 1px solid var(--bg-card-border);
+  box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.08);
+  opacity: 0.9;
+  transition: all var(--transition-normal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.hero-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  display: block;
+}
+
 /* ── Tab Switcher ── */
 .tab-container {
+  position: relative;
+  z-index: 2;
   display: flex;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
@@ -216,6 +278,8 @@ body {
 
 /* ── Cards ── */
 .card {
+  position: relative;
+  z-index: 2;
   background: var(--bg-card);
   border: 1px solid var(--bg-card-border);
   border-radius: var(--radius-xl);
@@ -1112,6 +1176,12 @@ body {
   }
 }
 
+@media (max-width: 1100px) {
+  .hero-bg-frame-container {
+    display: none;
+  }
+}
+
 /* ── Mobile Responsiveness ── */
 @media (max-width: 767px) {
   .features-grid {
@@ -1122,6 +1192,21 @@ body {
   .hero-section {
     margin: 0.5rem auto 1.5rem;
     padding: 0 0.5rem;
+  }
+
+  .hero-bg-frame-container {
+    top: 100px;
+    max-width: 95%;
+  }
+
+  .hero-bg-frame {
+    max-width: 100%;
+    transform: rotate(-1.5deg);
+    padding: 0.35rem;
+  }
+
+  .hero-bg-img {
+    max-height: 180px;
   }
 
   .hero-title {
