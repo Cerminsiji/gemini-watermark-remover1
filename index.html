@@ -305,6 +305,8 @@
       </div>
 
       <div id="video-results" class="hidden mt-4"></div>
+    </section>
+
     <!-- How It Works Step-by-Step Section -->
     <section class="how-it-works-section">
       <h2 class="section-title">How to Remove Gemini Watermarks</h2>
@@ -340,6 +342,51 @@
           <p class="step-desc">
             Click Remove &amp; Export to generate your watermark-free file locally in your browser with zero quality loss.
           </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Before & After Comparison Section -->
+    <section class="comparison-section card">
+      <div class="comparison-header">
+        <h2 class="section-title">Before &amp; After Comparison</h2>
+        <p class="comparison-subtitle">
+          Instead of blurry AI inpainting, our tool uses <strong>exact mathematical alpha unblending</strong> to subtract the transparent Gemini watermark mask pixel-by-pixel—restoring 100% of your original image quality.
+        </p>
+      </div>
+
+      <div class="comparison-grid">
+        <div class="comparison-card">
+          <span class="comparison-badge badge-before">
+            <iconify-icon icon="ph:x-circle" width="14"></iconify-icon> Before (Watermarked)
+          </span>
+          <div class="comparison-img-wrapper checker">
+            <img src="./assets/before.webp" alt="Gemini Image with Watermark" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="comparison-card">
+          <span class="comparison-badge badge-after">
+            <iconify-icon icon="ph:check-circle" width="14"></iconify-icon> After (Watermark Removed)
+          </span>
+          <div class="comparison-img-wrapper checker">
+            <img src="./assets/after.webp" alt="Cleaned Gemini Image without Watermark" loading="lazy" />
+          </div>
+        </div>
+      </div>
+
+      <div class="comparison-features">
+        <div class="feature-item">
+          <iconify-icon icon="ph:sparkle" width="20" class="feature-icon text-brand"></iconify-icon>
+          <div>
+            <strong>Zero Quality Loss:</strong> Reverse-engineering the exact alpha blend math means zero pixel blur or distortion.
+          </div>
+        </div>
+        <div class="feature-item">
+          <iconify-icon icon="ph:lightning-bold" width="20" class="feature-icon text-amber"></iconify-icon>
+          <div>
+            <strong>Instant In-Browser Speed:</strong> Processed 100% locally via WebCodecs &amp; Canvas without sending files to any server.
+          </div>
         </div>
       </div>
     </section>
