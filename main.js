@@ -1023,8 +1023,40 @@ async function fetchGitHubStars() {
 document.addEventListener('DOMContentLoaded', () => {
   fetchGitHubStars();
   initCustomSelects();
+  initMobileMenu();
 });
 fetchGitHubStars();
+
+// ── Mobile Hamburger Menu Handler ──
+function initMobileMenu() {
+  const menuBtn = document.getElementById('mobile-menu-btn');
+  const headerActions = document.getElementById('header-actions');
+  if (!menuBtn || !headerActions) return;
+
+  const iconHamburger = menuBtn.querySelector('.icon-hamburger');
+  const iconClose = menuBtn.querySelector('.icon-close');
+
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = headerActions.classList.toggle('open');
+    menuBtn.classList.toggle('active', isOpen);
+    if (iconHamburger && iconClose) {
+      iconHamburger.classList.toggle('hidden', isOpen);
+      iconClose.classList.toggle('hidden', !isOpen);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!headerActions.contains(e.target) && !menuBtn.contains(e.target)) {
+      headerActions.classList.remove('open');
+      menuBtn.classList.remove('active');
+      if (iconHamburger && iconClose) {
+        iconHamburger.classList.remove('hidden');
+        iconClose.classList.add('hidden');
+      }
+    }
+  });
+}
 
 // ── Custom Select Component Logic ──
 function initCustomSelects() {
