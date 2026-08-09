@@ -682,7 +682,7 @@ function initTabs() {
   function switchTab(target) {
     if (target === 'image') {
       currentTab = 'image';
-      try { sessionStorage.setItem('activeTab', 'image'); } catch (e) {}
+      try { sessionStorage.setItem('activeTab', 'image'); } catch (e) { }
       tabImage.classList.add('active');
       tabVideo.classList.remove('active');
       panelImage.style.display = 'block';
@@ -691,7 +691,7 @@ function initTabs() {
       panelVideo.classList.add('hidden');
     } else {
       currentTab = 'video';
-      try { sessionStorage.setItem('activeTab', 'video'); } catch (e) {}
+      try { sessionStorage.setItem('activeTab', 'video'); } catch (e) { }
       tabVideo.classList.add('active');
       tabImage.classList.remove('active');
       panelVideo.style.display = 'block';
@@ -718,14 +718,13 @@ function initTabs() {
     } else if (savedTab === 'image') {
       switchTab('image');
     }
-  } catch (e) {}
+  } catch (e) { }
 }
 
 function initImageRemover() {
   const dropzone = document.getElementById('img-dropzone');
   const fileInput = document.getElementById('img-input');
   const resultsArea = document.getElementById('img-results');
-  const presetSelect = document.getElementById('img-preset');
 
   const tunerContainer = document.getElementById('img-tuner-container');
   const mainCanvas = document.getElementById('img-main-canvas');
@@ -762,24 +761,38 @@ function initImageRemover() {
     if (lblOffsetY) lblOffsetY.textContent = `${currentSettings.offsetY}px`;
   }
 
-  function applyPreset(presetKey) {
+  function updateDetectBadge() {
+    const badgeEl = document.getElementById('img-detect-badge');
+    if (!badgeEl) return;
+    if (currentDetected) {
+      if (currentDetected.matchFound) {
+        badgeEl.className = 'detect-badge';
+        badgeEl.innerHTML = `<iconify-icon icon="ph:scan" width="16" style="color: #6366f1;"></iconify-icon> <span>Auto-Detected: <strong>${currentDetected.name}</strong> (${Math.round(currentDetected.score * 100)}% match)</span>`;
+        badgeEl.classList.remove('hidden');
+      } else {
+        badgeEl.className = 'detect-badge warning';
+        badgeEl.innerHTML = `<iconify-icon icon="ph:info" width="16" style="color: #d97706;"></iconify-icon> <span>Standard Preset Applied (${currentDetected.name})</span>`;
+        badgeEl.classList.remove('hidden');
+      }
+    } else {
+      badgeEl.classList.add('hidden');
+    }
+  }
+
+  function applyAutoSettings() {
     const w = currentPreviewFrame ? currentPreviewFrame.width : 1536;
     const h = currentPreviewFrame ? currentPreviewFrame.height : 1536;
 
     let p;
-    if (presetKey === 'auto') {
-      if (currentDetected) {
-        p = {
-          gain: currentDetected.gain,
-          offsetX: currentDetected.offsetX,
-          offsetY: currentDetected.offsetY,
-          sizeScale: currentDetected.sizeScale
-        };
-      } else {
-        p = getAdaptiveImagePreset('new', w, h);
-      }
+    if (currentDetected) {
+      p = {
+        gain: currentDetected.gain,
+        offsetX: currentDetected.offsetX,
+        offsetY: currentDetected.offsetY,
+        sizeScale: currentDetected.sizeScale
+      };
     } else {
-      p = getAdaptiveImagePreset(presetKey, w, h);
+      p = getAdaptiveImagePreset('new', w, h);
     }
     Object.assign(currentSettings, p);
 
@@ -797,12 +810,9 @@ function initImageRemover() {
     if (sliderScale) sliderScale.value = currentSettings.sizeScale;
 
     updateSliderLabels();
+    updateDetectBadge();
     renderTuner();
   }
-
-  presetSelect?.addEventListener('change', () => {
-    applyPreset(presetSelect.value);
-  });
 
   function bindSlider(element, prop, isFloat = false) {
     if (!element) return;
@@ -819,7 +829,7 @@ function initImageRemover() {
   bindSlider(sliderOffsetY, 'offsetY', false);
 
   btnResetSliders?.addEventListener('click', () => {
-    applyPreset(presetSelect?.value || 'auto');
+    applyAutoSettings();
   });
 
   dropzone.onclick = () => fileInput.click();
@@ -958,20 +968,7 @@ function initImageRemover() {
       // Run Auto-Detection
       currentDetected = detectWatermarkCandidate(currentPreviewFrame.imageData, currentPreviewFrame.width, currentPreviewFrame.height, watermarkEngine.bg96);
 
-      const badgeEl = document.getElementById('img-detect-badge');
-      if (badgeEl) {
-        if (currentDetected.matchFound) {
-          badgeEl.className = 'detect-badge';
-          badgeEl.innerHTML = `<iconify-icon icon="ph:sparkle-fill" width="16" style="color: #6366f1;"></iconify-icon> <span>Auto-Detected: <strong>${currentDetected.name}</strong> (${Math.round(currentDetected.score * 100)}% match)</span>`;
-          badgeEl.classList.remove('hidden');
-        } else {
-          badgeEl.className = 'detect-badge warning';
-          badgeEl.innerHTML = `<iconify-icon icon="ph:info-fill" width="16" style="color: #d97706;"></iconify-icon> <span>Standard Preset Applied (${currentDetected.name})</span>`;
-          badgeEl.classList.remove('hidden');
-        }
-      }
-
-      applyPreset(presetSelect?.value || 'auto');
+      applyAutoSettings();
       smoothScrollTo(tunerContainer);
     } catch (err) {
       console.error(err);
