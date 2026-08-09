@@ -39,21 +39,9 @@ function removeWatermark(imageData, alphaMap, position, options = {}) {
 
 function getWatermarkInfo(width, height) {
   const minDim = Math.min(width, height);
-  const isLarge = width >= 1024 || height >= 1024;
-
-  let size, margin;
-  if (minDim >= 1400) {
-    size = 96;
-    margin = 64;
-  } else if (minDim >= 800 || isLarge) {
-    const ratio = minDim / 1536;
-    size = Math.max(48, Math.round(96 * ratio));
-    margin = Math.max(32, Math.round(64 * ratio));
-  } else {
-    const ratio = minDim / 1024;
-    size = Math.max(24, Math.round(48 * Math.min(1.2, ratio * 1.5)));
-    margin = Math.max(16, Math.round(32 * ratio));
-  }
+  const ratio = minDim / 1536;
+  const size = Math.max(16, Math.round(96 * ratio));
+  const margin = Math.max(8, Math.round(64 * ratio));
 
   return {
     size,
