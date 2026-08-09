@@ -43,24 +43,125 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Gemini Watermark Remover",
-    "operatingSystem": "Web Browser",
-    "applicationCategory": "MultimediaApplication",
-    "description": "Remove Google Gemini and Veo 3 AI watermarks from videos and images instantly. 100% free, secure, and processed completely inside your browser without quality loss.",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    }
-  }
-  </script>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "Gemini Watermark Remover",
-    "url": "https://ishara-madu.github.io/gemini-watermark-remover/"
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "Gemini Watermark Remover",
+        "url": "https://ishara-madu.github.io/gemini-watermark-remover/",
+        "operatingSystem": "All, Web Browser",
+        "applicationCategory": "MultimediaApplication",
+        "applicationSubCategory": "Image and Video Editor",
+        "browserRequirements": "Requires HTML5 Canvas and WebCodecs support",
+        "description": "Free, 100% private client-side tool to remove Google Gemini and Veo 3 AI watermarks from images and videos using mathematical alpha unblending with zero quality loss.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "100% Client-Side Private Processing",
+          "Mathematical Alpha Unblending (Zero Quality Loss)",
+          "Google Gemini Image Support (PNG, JPG, WebP)",
+          "Gemini Veo 3 AI Video Watermark Removal (MP4, WebM, MOV)",
+          "Real-time Live Tuner with Dual Zoomed Previews"
+        ],
+        "author": {
+          "@type": "Person",
+          "name": "Ishara M."
+        }
+      },
+      {
+        "@type": "WebSite",
+        "name": "Gemini Watermark Remover",
+        "url": "https://ishara-madu.github.io/gemini-watermark-remover/",
+        "description": "Free online AI watermark remover for Google Gemini photos and Veo 3 videos."
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "How does Gemini Watermark Remover work?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Google Gemini embeds a transparent logo mask into generated images and Veo videos using alpha blending. Instead of guessing pixels like AI object removers, our tool applies the exact reverse mathematical equation to unblend the watermark pixel-by-pixel, restoring 100% of your original pixel clarity."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is this tool completely free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, 100% free! There are no hidden subscription fees, no user registration required, no file count limits, and no secondary watermarks added to your exported files."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Are my images and videos kept private and secure?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolutely. All image and video processing is executed 100% locally inside your web browser using HTML5 Canvas and WebCodecs APIs. Your files are never uploaded, stored, or transmitted to any external server."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it support Google Gemini Veo 3 AI videos?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! It features full frame-by-frame MP4 video processing for Gemini Veo 3 generated videos. It preserves original audio tracks and uses GPU-accelerated WebCodecs for fast browser encoding."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is mathematical removal better than AI inpainting?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "AI inpainting tools guess what lies beneath the watermark by blurring or smudging pixels, causing loss of detail. Mathematical alpha unblending subtracts the exact transparency values of the watermark, revealing the actual sharp original pixels underneath."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What image and video file formats are supported?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We support all major formats: Images (PNG, JPG, WebP) and Videos (MP4, WebM, MOV) with instant download options."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What if the watermark box is slightly misaligned?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You can use the built-in Live Tuner controls (Strength/Gain, Size Scale, Position X, and Position Y sliders). The dual zoomed preview windows allow you to visually align the box over the watermark with pixel perfection."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use this tool on mobile phones and tablets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes! The website is fully mobile-responsive and works seamlessly on smartphones and tablets across iOS (Safari) and Android (Chrome/Edge/Firefox)."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need to install any browser extension or software?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No installation is required. The web application runs completely inside standard web browsers without needing any plugins or software downloads."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Why is my active tab remembered when I reload?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We store your active tab choice (Image vs Video Remover) in your browser's session storage, ensuring that refreshing the page keeps you right where you left off until your session ends."
+            }
+          }
+        ]
+      }
+    ]
   }
   </script>
   <!-- Performance Resource Hints & Font Preconnects -->
@@ -80,7 +181,7 @@
         <img src="./assets/logo.webp" alt="Gemini Watermark Remover Logo" width="50" height="50" decoding="async"
           fetchpriority="high" style="object-fit: cover;" />
         <div class="brand-text">
-          <h1 class="brand-title">Gemini Watermark Remover</h1>
+          <span class="brand-title">Gemini Watermark Remover</span>
         </div>
       </div>
 
@@ -446,7 +547,7 @@
               <iconify-icon icon="ph:x-circle" width="14"></iconify-icon> Before
             </span>
             <div class="comparison-img-wrapper checker">
-              <img src="./assets/before.webp" alt="Gemini Image with Watermark" loading="lazy" decoding="async" />
+              <img src="./assets/before.webp" alt="Google Gemini AI generated image showing transparent watermark logo before removal" width="400" height="400" loading="lazy" decoding="async" />
             </div>
           </div>
 
@@ -455,8 +556,7 @@
               <iconify-icon icon="ph:check-circle" width="14"></iconify-icon> After
             </span>
             <div class="comparison-img-wrapper checker">
-              <img src="./assets/after.webp" alt="Cleaned Gemini Image without Watermark" loading="lazy"
-                decoding="async" />
+              <img src="./assets/after.webp" alt="Cleaned Google Gemini image with watermark removed mathematically with 100% original quality" width="400" height="400" loading="lazy" decoding="async" />
             </div>
           </div>
         </div>
@@ -716,7 +816,7 @@
             <iconify-icon icon="ph:github-logo-bold" width="14"></iconify-icon> GitHub
           </a>
           <span class="footer-dot">•</span>
-          <a href="https://buymeacoffee.com" target="_blank" rel="noopener noreferrer" class="footer-link">
+          <a href="https://buymeacoffee.com/ishara.madu" target="_blank" rel="noopener noreferrer" class="footer-link">
             <iconify-icon icon="ph:heart-fill" width="14" style="color: #f43f5e;"></iconify-icon> Support
           </a>
         </div>
