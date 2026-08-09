@@ -471,14 +471,14 @@ function getAdaptiveVideoPreset(presetKey, width = 720, height = 720) {
   };
 }
 
-// ── Watermark Auto-Detection System ──
+// ── Watermark Auto-Detection System with Multi-Scale Pyramid Matching ──
 
-function evaluateCandidateMatch(imageData, width, height, bgImg, box) {
-  const { x, y, size } = box;
-  if (x < 0 || y < 0 || x + size > width || y + size > height || size <= 0) {
-    return { score: -1, variance: 0 };
+const alphaTemplateCache = new Map();
+
+function getAlphaTemplateData(bgImg, size) {
+  if (alphaTemplateCache.has(size)) {
+    return alphaTemplateCache.get(size);
   }
-
   const c = document.createElement('canvas');
   c.width = size;
   c.height = size;
@@ -487,6 +487,17 @@ function evaluateCandidateMatch(imageData, width, height, bgImg, box) {
   cx.imageSmoothingQuality = 'high';
   cx.drawImage(bgImg, 0, 0, size, size);
   const alphaData = cx.getImageData(0, 0, size, size).data;
+  alphaTemplateCache.set(size, alphaData);
+  return alphaData;
+}
+
+function evaluateCandidateMatch(imageData, width, height, bgImg, box) {
+  const { x, y, size } = box;
+  if (x < 0 || y < 0 || x + size > width || y + size > height || size <= 0) {
+    return { score: -1, variance: 0 };
+  }
+
+  const alphaData = getAlphaTemplateData(bgImg, size);
 
   let sumL = 0, sumA = 0;
   let sumL2 = 0, sumA2 = 0;
@@ -536,103 +547,129 @@ function evaluateCandidateMatch(imageData, width, height, bgImg, box) {
 function detectWatermarkCandidate(imageData, width, height, bgImg) {
   const minDim = Math.min(width, height);
   const baseRatio = minDim / 1536;
+  const base = getWatermarkInfo(width, height);
 
-  const candidates = [
-    // 1. New Gemini Adaptive (12.5% Inset)
+  // Candidate Layout Families:
+  const layoutFamilies = [
+    // 1. New Gemini Adaptive Inset (12.5% Inset)
     {
       presetKey: 'new',
       name: 'New Gemini (Adaptive)',
-      size: Math.max(16, Math.round(96 * baseRatio)),
-      margin: Math.max(8, Math.round(192 * baseRatio)),
-      gain: 0.6,
-      sizeScale: 1.0,
+      baseSize: base.size,
+      calcPos: (s) => {
+        const m = Math.max(8, Math.round(192 * baseRatio));
+        return { x: Math.max(0, width - m - s), y: Math.max(0, height - m - s) };
+      },
+      gain: 0.6
     },
     // 2. Classic Corner Adaptive (4.16% Margin)
     {
       presetKey: 'classic',
       name: 'Classic Corner (Adaptive)',
-      size: Math.max(16, Math.round(96 * baseRatio)),
-      margin: Math.max(8, Math.round(64 * baseRatio)),
-      gain: 1.0,
-      sizeScale: 1.0,
+      baseSize: base.size,
+      calcPos: (s) => {
+        const m = Math.max(8, Math.round(64 * baseRatio));
+        return { x: Math.max(0, width - m - s), y: Math.max(0, height - m - s) };
+      },
+      gain: 1.0
     },
-    // 3. New Gemini Fixed 96px (Standard 1K/2K/4K outputs)
+    // 3. Fixed Standard (96px watermark regardless of crop/resize)
     {
       presetKey: 'new',
-      name: 'New Gemini (96px Fixed)',
-      size: 96,
-      margin: minDim >= 1400 ? 192 : Math.round(128 * Math.max(0.5, minDim / 1024)),
-      gain: 0.6,
-      sizeScale: minDim > 0 ? 96 / Math.max(16, Math.round(96 * baseRatio)) : 1.0,
+      name: 'Gemini (Fixed 96px Inset)',
+      baseSize: 96,
+      calcPos: (s) => {
+        const m = minDim >= 1400 ? 192 : Math.round(128 * Math.max(0.5, minDim / 1024));
+        return { x: Math.max(0, width - m - s), y: Math.max(0, height - m - s) };
+      },
+      gain: 0.6
     },
-    // 4. Classic Corner Fixed 96px / 48px
+    // 4. Fixed 96px Classic Corner
     {
       presetKey: 'classic',
-      name: 'Classic Corner (Fixed)',
-      size: minDim >= 1024 ? 96 : 48,
-      margin: minDim >= 1024 ? 64 : 32,
-      gain: 1.0,
-      sizeScale: minDim > 0 ? (minDim >= 1024 ? 96 : 48) / Math.max(16, Math.round(96 * baseRatio)) : 1.0,
+      name: 'Classic Corner (Fixed 96px)',
+      baseSize: 96,
+      calcPos: (s) => {
+        const m = minDim >= 1024 ? 64 : 32;
+        return { x: Math.max(0, width - m - s), y: Math.max(0, height - m - s) };
+      },
+      gain: 1.0
     }
   ];
 
-  let bestResult = null;
+  // Scale search pyramid: 0.55x to 1.70x
+  const scalePyramid = [0.55, 0.70, 0.85, 1.00, 1.15, 1.30, 1.50, 1.70];
+
+  let bestMatch = null;
   let bestScore = -1;
 
-  for (const cand of candidates) {
-    const s = Math.min(cand.size, Math.min(width, height));
-    const m = cand.margin;
-    const x = Math.max(0, width - m - s);
-    const y = Math.max(0, height - m - s);
+  for (const layout of layoutFamilies) {
+    for (const scale of scalePyramid) {
+      const s = Math.max(16, Math.min(Math.round(layout.baseSize * scale), Math.min(width, height) - 8));
+      const pos = layout.calcPos(s);
+      const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: pos.x, y: pos.y, size: s });
 
-    const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x, y, size: s });
-    if (score > bestScore) {
-      bestScore = score;
-      bestResult = {
-        cand,
-        bestX: x,
-        bestY: y,
-        size: s,
-        score
-      };
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = {
+          layout,
+          size: s,
+          scale,
+          x: pos.x,
+          y: pos.y,
+          score
+        };
+      }
     }
   }
 
-  // Local anchor refinement: fine-tune ±16px in step of 4px
-  if (bestResult && bestResult.score > 0.05) {
-    const { bestX, bestY, size, cand } = bestResult;
-    let refinedX = bestX;
-    let refinedY = bestY;
-    let refinedScore = bestResult.score;
+  // Refinement: Joint 2D Position (±16px) and Scale fine-tuning (±10%)
+  if (bestMatch && bestMatch.score > 0.05) {
+    let refinedX = bestMatch.x;
+    let refinedY = bestMatch.y;
+    let refinedSize = bestMatch.size;
+    let refinedScore = bestMatch.score;
 
-    for (let dy = -16; dy <= 16; dy += 4) {
-      for (let dx = -16; dx <= 16; dx += 4) {
-        if (dx === 0 && dy === 0) continue;
-        const testX = bestX + dx;
-        const testY = bestY + dy;
-        const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: testX, y: testY, size });
-        if (score > refinedScore) {
-          refinedScore = score;
-          refinedX = testX;
-          refinedY = testY;
+    const fineSizes = [
+      Math.max(16, Math.round(bestMatch.size * 0.90)),
+      Math.max(16, Math.round(bestMatch.size * 0.95)),
+      bestMatch.size,
+      Math.min(Math.min(width, height) - 8, Math.round(bestMatch.size * 1.05)),
+      Math.min(Math.min(width, height) - 8, Math.round(bestMatch.size * 1.10))
+    ];
+    const uniqueSizes = [...new Set(fineSizes)];
+
+    for (const testSize of uniqueSizes) {
+      for (let dy = -16; dy <= 16; dy += 4) {
+        for (let dx = -16; dx <= 16; dx += 4) {
+          const testX = Math.max(0, Math.min(width - testSize, bestMatch.x + dx));
+          const testY = Math.max(0, Math.min(height - testSize, bestMatch.y + dy));
+          const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: testX, y: testY, size: testSize });
+
+          if (score > refinedScore) {
+            refinedScore = score;
+            refinedX = testX;
+            refinedY = testY;
+            refinedSize = testSize;
+          }
         }
       }
     }
 
-    const base = getWatermarkInfo(width, height);
+    const calculatedScale = Math.round((refinedSize / base.size) * 100) / 100;
+
     return {
       matchFound: refinedScore >= 0.12,
       score: refinedScore,
-      presetKey: cand.presetKey,
-      name: cand.name,
+      presetKey: bestMatch.layout.presetKey,
+      name: `${bestMatch.layout.name} (${refinedSize}px)`,
       offsetX: refinedX - base.x,
       offsetY: refinedY - base.y,
-      sizeScale: cand.sizeScale || 1.0,
-      gain: cand.gain || 0.6,
+      sizeScale: Math.max(0.5, Math.min(2.5, calculatedScale)),
+      gain: bestMatch.layout.gain || 0.6,
     };
   }
 
-  const base = getWatermarkInfo(width, height);
   const fallbackOffset = Math.round(-128 * baseRatio);
   return {
     matchFound: false,
@@ -653,106 +690,119 @@ function detectVideoWatermarkCandidate(imageData, width, height, bgImg) {
     margin: Math.round(baseDim / 10),
   };
 
-  const candidates = [
-    // 1. Veo Adaptive Inset (Standard Veo watermark)
+  const layoutFamilies = [
+    // 1. Veo Adaptive Inset
     {
       name: 'Gemini Veo (Adaptive Inset)',
-      size: veoBase.size,
-      margin: veoBase.margin,
-      gain: 0.6,
-      sizeScale: 1.0,
-      customOffset: () => {
+      baseSize: veoBase.size,
+      calcPos: (s) => {
         const adaptiveOffset = Math.round(-24 * (baseDim / 720));
-        return { offsetX: adaptiveOffset, offsetY: adaptiveOffset };
-      }
+        const baseX = Math.max(0, width - veoBase.margin - veoBase.size);
+        const baseY = Math.max(0, height - veoBase.margin - veoBase.size);
+        return {
+          x: Math.max(0, Math.min(width - s, baseX + adaptiveOffset)),
+          y: Math.max(0, Math.min(height - s, baseY + adaptiveOffset))
+        };
+      },
+      gain: 0.6
     },
     // 2. Veo Classic Corner
     {
       name: 'Gemini Veo (Corner)',
-      size: veoBase.size,
-      margin: veoBase.margin,
-      gain: 0.6,
-      sizeScale: 1.0,
-      customOffset: () => ({ offsetX: 0, offsetY: 0 })
+      baseSize: veoBase.size,
+      calcPos: (s) => {
+        const baseX = Math.max(0, width - veoBase.margin - veoBase.size);
+        const baseY = Math.max(0, height - veoBase.margin - veoBase.size);
+        return {
+          x: Math.max(0, Math.min(width - s, baseX)),
+          y: Math.max(0, Math.min(height - s, baseY))
+        };
+      },
+      gain: 0.6
     },
     // 3. Gemini Sparkle Image-style on Video
     {
       name: 'Gemini Sparkle (Standard)',
-      size: Math.max(24, Math.round(96 * (baseDim / 1536))),
-      margin: Math.max(16, Math.round(192 * (baseDim / 1536))),
-      gain: 0.6,
-      sizeScale: 1.0,
-      customOffset: (s, m) => {
-        const vBaseX = Math.max(0, width - veoBase.margin - veoBase.size);
-        const vBaseY = Math.max(0, height - veoBase.margin - veoBase.size);
+      baseSize: Math.max(24, Math.round(96 * (baseDim / 1536))),
+      calcPos: (s) => {
+        const m = Math.max(16, Math.round(192 * (baseDim / 1536)));
         return {
-          offsetX: (width - m - s) - vBaseX,
-          offsetY: (height - m - s) - vBaseY
+          x: Math.max(0, width - m - s),
+          y: Math.max(0, height - m - s)
         };
-      }
+      },
+      gain: 0.6
     }
   ];
 
-  let bestResult = null;
+  const scalePyramid = [0.65, 0.85, 1.00, 1.20, 1.45];
+
+  let bestMatch = null;
   let bestScore = -1;
 
-  for (const cand of candidates) {
-    const s = Math.min(cand.size, Math.min(width, height));
-    const m = cand.margin;
-    let offset = { offsetX: 0, offsetY: 0 };
-    if (typeof cand.customOffset === 'function') {
-      offset = cand.customOffset(s, m);
-    }
-    const baseX = Math.max(0, width - veoBase.margin - veoBase.size);
-    const baseY = Math.max(0, height - veoBase.margin - veoBase.size);
-    const x = Math.max(0, Math.min(width - s, baseX + offset.offsetX));
-    const y = Math.max(0, Math.min(height - s, baseY + offset.offsetY));
+  for (const layout of layoutFamilies) {
+    for (const scale of scalePyramid) {
+      const s = Math.max(16, Math.min(Math.round(layout.baseSize * scale), Math.min(width, height) - 8));
+      const pos = layout.calcPos(s);
+      const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: pos.x, y: pos.y, size: s });
 
-    const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x, y, size: s });
-    if (score > bestScore) {
-      bestScore = score;
-      bestResult = {
-        cand,
-        bestX: x,
-        bestY: y,
-        size: s,
-        score
-      };
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = {
+          layout,
+          size: s,
+          scale,
+          x: pos.x,
+          y: pos.y,
+          score
+        };
+      }
     }
   }
 
   const baseX = Math.max(0, width - veoBase.margin - veoBase.size);
   const baseY = Math.max(0, height - veoBase.margin - veoBase.size);
 
-  // Local anchor refinement: fine-tune ±16px in step of 4px
-  if (bestResult && bestResult.score > 0.05) {
-    const { bestX, bestY, size, cand } = bestResult;
-    let refinedX = bestX;
-    let refinedY = bestY;
-    let refinedScore = bestResult.score;
+  if (bestMatch && bestMatch.score > 0.05) {
+    let refinedX = bestMatch.x;
+    let refinedY = bestMatch.y;
+    let refinedSize = bestMatch.size;
+    let refinedScore = bestMatch.score;
 
-    for (let dy = -16; dy <= 16; dy += 4) {
-      for (let dx = -16; dx <= 16; dx += 4) {
-        if (dx === 0 && dy === 0) continue;
-        const testX = Math.max(0, Math.min(width - size, bestX + dx));
-        const testY = Math.max(0, Math.min(height - size, bestY + dy));
-        const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: testX, y: testY, size });
-        if (score > refinedScore) {
-          refinedScore = score;
-          refinedX = testX;
-          refinedY = testY;
+    const fineSizes = [
+      Math.max(16, Math.round(bestMatch.size * 0.92)),
+      bestMatch.size,
+      Math.min(Math.min(width, height) - 8, Math.round(bestMatch.size * 1.08))
+    ];
+    const uniqueSizes = [...new Set(fineSizes)];
+
+    for (const testSize of uniqueSizes) {
+      for (let dy = -16; dy <= 16; dy += 4) {
+        for (let dx = -16; dx <= 16; dx += 4) {
+          const testX = Math.max(0, Math.min(width - testSize, bestMatch.x + dx));
+          const testY = Math.max(0, Math.min(height - testSize, bestMatch.y + dy));
+          const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: testX, y: testY, size: testSize });
+
+          if (score > refinedScore) {
+            refinedScore = score;
+            refinedX = testX;
+            refinedY = testY;
+            refinedSize = testSize;
+          }
         }
       }
     }
 
+    const calculatedScale = Math.round((refinedSize / veoBase.size) * 100) / 100;
+
     return {
       matchFound: refinedScore >= 0.10,
       score: refinedScore,
-      name: cand.name,
+      name: `${bestMatch.layout.name} (${refinedSize}px)`,
       offsetX: refinedX - baseX,
       offsetY: refinedY - baseY,
-      sizeScale: cand.sizeScale || 1.0,
-      gain: cand.gain || 0.6,
+      sizeScale: Math.max(0.5, Math.min(2.5, calculatedScale)),
+      gain: bestMatch.layout.gain || 0.6,
     };
   }
 
