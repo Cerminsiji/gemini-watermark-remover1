@@ -1284,6 +1284,24 @@ function initVideoRemover() {
     if (e.target.files.length) handleVideoFile(e.target.files[0]);
   };
 
+  function isFrameMeaningful(imageData) {
+    const data = imageData.data;
+    let sum = 0, sumSq = 0;
+    const len = data.length;
+    const step = Math.max(4, Math.floor(len / 2000) * 4);
+    let samples = 0;
+    for (let i = 0; i < len; i += step) {
+      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      sum += lum;
+      sumSq += lum * lum;
+      samples++;
+    }
+    if (samples === 0) return false;
+    const mean = sum / samples;
+    const variance = (sumSq / samples) - (mean * mean);
+    return mean > 12 && mean < 245 && variance > 10;
+  }
+
   function grabPreviewFrame(file) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
@@ -1293,24 +1311,103 @@ function initVideoRemover() {
       v.playsInline = true;
       v.src = url;
 
-      const cleanup = () => URL.revokeObjectURL(url);
-      v.onerror = () => { cleanup(); reject(new Error('Could not read this video file.')); };
-      v.onloadedmetadata = () => {
-        const seekTo = Math.min(Math.max((v.duration || 1) * 0.3, 0.1), (v.duration || 1) - 0.05 || 0.1);
-        const onSeeked = () => {
-          try {
-            const w = v.videoWidth, h = v.videoHeight;
-            const c = document.createElement('canvas');
-            c.width = w; c.height = h;
-            const cx = c.getContext('2d', { willReadFrequently: true });
-            cx.drawImage(v, 0, 0, w, h);
-            const imageData = cx.getImageData(0, 0, w, h);
+      let cleanedUp = false;
+      const cleanup = () => {
+        if (!cleanedUp) {
+          cleanedUp = true;
+          URL.revokeObjectURL(url);
+          v.src = '';
+          v.load();
+        }
+      };
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('Timed out waiting for video frame extraction.'));
+      }, 15000);
+
+      v.onerror = () => {
+        clearTimeout(timeout);
+        cleanup();
+        reject(new Error('Could not read this video file.'));
+      };
+
+      v.onloadedmetadata = async () => {
+        const duration = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : 1;
+        const ratios = [0.35, 0.50, 0.20, 0.65, 0.15, 0.80, 0.05];
+        const timestamps = ratios.map(r => Math.min(Math.max(duration * r, 0.05), Math.max(0.05, duration - 0.05)));
+
+        let bestFrame = null;
+        let highestVariance = -1;
+
+        const w = v.videoWidth || 720;
+        const h = v.videoHeight || 1280;
+        const c = document.createElement('canvas');
+        c.width = w;
+        c.height = h;
+        const cx = c.getContext('2d', { willReadFrequently: true });
+
+        const seekAndCapture = (time) => {
+          return new Promise((res) => {
+            const onSeeked = () => {
+              const capture = () => {
+                try {
+                  cx.drawImage(v, 0, 0, w, h);
+                  const imageData = cx.getImageData(0, 0, w, h);
+                  res(imageData);
+                } catch {
+                  res(null);
+                }
+              };
+              if ('requestVideoFrameCallback' in v) {
+                v.requestVideoFrameCallback(() => capture());
+              } else {
+                setTimeout(capture, 30);
+              }
+            };
+            v.addEventListener('seeked', onSeeked, { once: true });
+            try {
+              v.currentTime = time;
+            } catch {
+              res(null);
+            }
+          });
+        };
+
+        for (const t of timestamps) {
+          const imageData = await seekAndCapture(t);
+          if (!imageData) continue;
+
+          if (isFrameMeaningful(imageData)) {
+            clearTimeout(timeout);
             cleanup();
             resolve({ width: w, height: h, imageData });
-          } catch (err) { cleanup(); reject(err); }
-        };
-        v.onseeked = onSeeked;
-        try { v.currentTime = seekTo; } catch { onSeeked(); }
+            return;
+          }
+
+          const data = imageData.data;
+          let sum = 0, sumSq = 0, samples = 0;
+          for (let i = 0; i < data.length; i += 2000) {
+            const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            sum += lum;
+            sumSq += lum * lum;
+            samples++;
+          }
+          const mean = sum / (samples || 1);
+          const variance = (sumSq / (samples || 1)) - (mean * mean);
+          if (variance > highestVariance) {
+            highestVariance = variance;
+            bestFrame = imageData;
+          }
+        }
+
+        clearTimeout(timeout);
+        cleanup();
+        if (bestFrame) {
+          resolve({ width: w, height: h, imageData: bestFrame });
+        } else {
+          reject(new Error('Could not extract a readable frame from this video.'));
+        }
       };
     });
   }
