@@ -38,14 +38,26 @@ function removeWatermark(imageData, alphaMap, position, options = {}) {
 }
 
 function getWatermarkInfo(width, height) {
-  const isLarge = width > 1024 && height > 1024;
-  const size = isLarge ? 96 : 48;
-  const margin = isLarge ? 64 : 32;
+  const minDim = Math.min(width, height);
+  const isLarge = width >= 1024 || height >= 1024;
+
+  let size, margin;
+  if (minDim >= 1400) {
+    size = 96;
+    margin = 64;
+  } else if (minDim >= 900) {
+    size = isLarge ? 96 : 48;
+    margin = isLarge ? 64 : 32;
+  } else {
+    const ratio = minDim / 1024;
+    size = Math.max(24, Math.round(48 * Math.min(1.2, ratio * 1.5)));
+    margin = Math.max(16, Math.round(32 * ratio));
+  }
 
   return {
     size,
-    x: width - margin - size,
-    y: height - margin - size,
+    x: Math.max(0, width - margin - size),
+    y: Math.max(0, height - margin - size),
     width: size,
     height: size,
   };
@@ -146,7 +158,7 @@ class WatermarkEngine {
     const canvas = document.createElement('canvas');
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(size === 48 ? this.bg48 : this.bg96, 0, 0);
+    ctx.drawImage(size <= 48 ? this.bg48 : this.bg96, 0, 0, size, size);
 
     const map = calculateAlphaMap(ctx.getImageData(0, 0, size, size));
     this.alphaMaps[size] = map;
@@ -438,6 +450,40 @@ const VIDEO_PRESETS = {
   corner: { gain: 0.6, offsetX: 0, offsetY: 0, sizeScale: 1 }
 };
 
+function getAdaptiveImagePreset(presetKey, width = 1536, height = 1536) {
+  const minDim = Math.min(width, height || width);
+  const scaleRatio = Math.max(0.25, Math.min(1.5, minDim / 1536));
+
+  if (presetKey === 'classic') {
+    return { gain: 1.0, offsetX: 0, offsetY: 0, sizeScale: 1.0 };
+  }
+
+  const adaptiveOffset = Math.round(-128 * scaleRatio);
+  return {
+    gain: 0.6,
+    offsetX: adaptiveOffset,
+    offsetY: adaptiveOffset,
+    sizeScale: 1.0
+  };
+}
+
+function getAdaptiveVideoPreset(presetKey, width = 720, height = 720) {
+  const minDim = Math.min(width, height || width);
+  const scaleRatio = Math.max(0.3, Math.min(1.5, minDim / 720));
+
+  if (presetKey === 'corner') {
+    return { gain: 0.6, offsetX: 0, offsetY: 0, sizeScale: 1.0 };
+  }
+
+  const adaptiveOffset = Math.round(-24 * scaleRatio);
+  return {
+    gain: 0.6,
+    offsetX: adaptiveOffset,
+    offsetY: adaptiveOffset,
+    sizeScale: 1.0
+  };
+}
+
 function smoothScrollTo(element, offset = 75) {
   if (!element) return;
   setTimeout(() => {
@@ -554,13 +600,23 @@ function initImageRemover() {
   }
 
   function applyPreset(presetKey) {
-    const p = IMG_PRESETS[presetKey] || IMG_PRESETS.new;
+    const w = currentPreviewFrame ? currentPreviewFrame.width : 1536;
+    const h = currentPreviewFrame ? currentPreviewFrame.height : 1536;
+    const p = getAdaptiveImagePreset(presetKey, w, h);
     Object.assign(currentSettings, p);
 
+    if (sliderOffsetX) {
+      sliderOffsetX.min = -Math.round(w * 0.45);
+      sliderOffsetX.max = Math.round(w * 0.2);
+      sliderOffsetX.value = currentSettings.offsetX;
+    }
+    if (sliderOffsetY) {
+      sliderOffsetY.min = -Math.round(h * 0.45);
+      sliderOffsetY.max = Math.round(h * 0.2);
+      sliderOffsetY.value = currentSettings.offsetY;
+    }
     if (sliderGain) sliderGain.value = currentSettings.gain;
     if (sliderScale) sliderScale.value = currentSettings.sizeScale;
-    if (sliderOffsetX) sliderOffsetX.value = currentSettings.offsetX;
-    if (sliderOffsetY) sliderOffsetY.value = currentSettings.offsetY;
 
     updateSliderLabels();
     renderTuner();
@@ -806,13 +862,23 @@ function initVideoRemover() {
   }
 
   function applyPreset(presetKey) {
-    const p = VIDEO_PRESETS[presetKey] || VIDEO_PRESETS.veo;
+    const w = currentPreviewFrame ? currentPreviewFrame.width : 720;
+    const h = currentPreviewFrame ? currentPreviewFrame.height : 720;
+    const p = getAdaptiveVideoPreset(presetKey, w, h);
     Object.assign(currentSettings, p);
 
+    if (sliderOffsetX) {
+      sliderOffsetX.min = -Math.round(w * 0.45);
+      sliderOffsetX.max = Math.round(w * 0.2);
+      sliderOffsetX.value = currentSettings.offsetX;
+    }
+    if (sliderOffsetY) {
+      sliderOffsetY.min = -Math.round(h * 0.45);
+      sliderOffsetY.max = Math.round(h * 0.2);
+      sliderOffsetY.value = currentSettings.offsetY;
+    }
     if (sliderGain) sliderGain.value = currentSettings.gain;
     if (sliderScale) sliderScale.value = currentSettings.sizeScale;
-    if (sliderOffsetX) sliderOffsetX.value = currentSettings.offsetX;
-    if (sliderOffsetY) sliderOffsetY.value = currentSettings.offsetY;
 
     updateSliderLabels();
     renderTuner();
