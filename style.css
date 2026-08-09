@@ -1225,8 +1225,9 @@ body {
   }
 
   .hero-title {
-    font-size: 1.75rem;
-    line-height: 1.25;
+    font-size: 1.85rem;
+    line-height: 1.22;
+    letter-spacing: -0.025em;
   }
 
   .hero-description {
@@ -1362,12 +1363,14 @@ body {
   }
 
   .how-it-works-section {
-    margin-top: 3.5rem;
-    margin-bottom: 3.5rem;
+    margin-top: 4.75rem;
+    margin-bottom: 4.75rem;
   }
 
   .section-title {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
     margin-bottom: 1.75rem;
   }
 
@@ -1376,10 +1379,14 @@ body {
     gap: 1.5rem;
   }
 
+  .step-title {
+    font-size: 1.1rem;
+  }
+
   .comparison-section {
-    margin-top: 3.5rem;
-    margin-bottom: 3.5rem;
-    padding: 1.5rem 1rem;
+    margin-top: 4.75rem;
+    margin-bottom: 4.75rem;
+    padding: 2rem 1.15rem;
   }
 
   .comparison-layout {
@@ -1388,12 +1395,22 @@ body {
   }
 
   .comparison-title {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.65rem;
+    text-align: center;
   }
 
-  .comparison-title,
   .comparison-subtitle {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    color: var(--text-muted);
     text-align: center;
+    margin-bottom: 1.35rem;
+    max-width: 95%;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .comparison-media {
@@ -1402,8 +1419,8 @@ body {
   }
 
   .features-section {
-    margin-top: 3.5rem;
-    margin-bottom: 3.5rem;
+    margin-top: 4.75rem;
+    margin-bottom: 4.75rem;
   }
 
   .features-grid {
@@ -1411,9 +1428,13 @@ body {
     gap: 1.5rem;
   }
 
+  .feature-card-title {
+    font-size: 1.05rem;
+  }
+
   .faq-section {
-    margin-top: 3.5rem;
-    margin-bottom: 3.5rem;
+    margin-top: 4.75rem;
+    margin-bottom: 4.75rem;
   }
 
   .faq-layout {
@@ -1428,7 +1449,20 @@ body {
   }
 
   .faq-title {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+    line-height: 1.25;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.65rem;
+  }
+
+  .faq-subtitle {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .faq-container {
