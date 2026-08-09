@@ -471,6 +471,181 @@ function getAdaptiveVideoPreset(presetKey, width = 720, height = 720) {
   };
 }
 
+// ── Watermark Auto-Detection System ──
+
+function evaluateCandidateMatch(imageData, width, height, bgImg, box) {
+  const { x, y, size } = box;
+  if (x < 0 || y < 0 || x + size > width || y + size > height || size <= 0) {
+    return { score: -1, variance: 0 };
+  }
+
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const cx = c.getContext('2d', { willReadFrequently: true });
+  cx.imageSmoothingEnabled = true;
+  cx.imageSmoothingQuality = 'high';
+  cx.drawImage(bgImg, 0, 0, size, size);
+  const alphaData = cx.getImageData(0, 0, size, size).data;
+
+  let sumL = 0, sumA = 0;
+  let sumL2 = 0, sumA2 = 0;
+  let sumLA = 0;
+  let n = 0;
+
+  const step = size > 64 ? 2 : 1;
+
+  for (let r = 0; r < size; r += step) {
+    for (let col = 0; col < size; col += step) {
+      const imgIdx = ((y + r) * width + (x + col)) * 4;
+      const alphaIdx = (r * size + col) * 4;
+
+      const rVal = imageData.data[imgIdx];
+      const gVal = imageData.data[imgIdx + 1];
+      const bVal = imageData.data[imgIdx + 2];
+      const lum = 0.299 * rVal + 0.587 * gVal + 0.114 * bVal;
+
+      const alpha = Math.max(alphaData[alphaIdx], alphaData[alphaIdx + 1], alphaData[alphaIdx + 2]) / 255.0;
+
+      sumL += lum;
+      sumA += alpha;
+      sumL2 += lum * lum;
+      sumA2 += alpha * alpha;
+      sumLA += lum * alpha;
+      n++;
+    }
+  }
+
+  if (n === 0) return { score: -1, variance: 0 };
+
+  const meanL = sumL / n;
+  const meanA = sumA / n;
+  const varL = sumL2 / n - meanL * meanL;
+  const varA = sumA2 / n - meanA * meanA;
+
+  if (varL <= 1 || varA <= 0.0001) {
+    return { score: 0, variance: varL };
+  }
+
+  const covLA = sumLA / n - meanL * meanA;
+  const ncc = covLA / Math.sqrt(varL * varA);
+
+  return { score: ncc, variance: varL };
+}
+
+function detectWatermarkCandidate(imageData, width, height, bgImg) {
+  const minDim = Math.min(width, height);
+  const baseRatio = minDim / 1536;
+
+  const candidates = [
+    // 1. New Gemini Adaptive (12.5% Inset)
+    {
+      presetKey: 'new',
+      name: 'New Gemini (Adaptive)',
+      size: Math.max(16, Math.round(96 * baseRatio)),
+      margin: Math.max(8, Math.round(192 * baseRatio)),
+      gain: 0.6,
+      sizeScale: 1.0,
+    },
+    // 2. Classic Corner Adaptive (4.16% Margin)
+    {
+      presetKey: 'classic',
+      name: 'Classic Corner (Adaptive)',
+      size: Math.max(16, Math.round(96 * baseRatio)),
+      margin: Math.max(8, Math.round(64 * baseRatio)),
+      gain: 1.0,
+      sizeScale: 1.0,
+    },
+    // 3. New Gemini Fixed 96px (Standard 1K/2K/4K outputs)
+    {
+      presetKey: 'new',
+      name: 'New Gemini (96px Fixed)',
+      size: 96,
+      margin: minDim >= 1400 ? 192 : Math.round(128 * Math.max(0.5, minDim / 1024)),
+      gain: 0.6,
+      sizeScale: minDim > 0 ? 96 / Math.max(16, Math.round(96 * baseRatio)) : 1.0,
+    },
+    // 4. Classic Corner Fixed 96px / 48px
+    {
+      presetKey: 'classic',
+      name: 'Classic Corner (Fixed)',
+      size: minDim >= 1024 ? 96 : 48,
+      margin: minDim >= 1024 ? 64 : 32,
+      gain: 1.0,
+      sizeScale: minDim > 0 ? (minDim >= 1024 ? 96 : 48) / Math.max(16, Math.round(96 * baseRatio)) : 1.0,
+    }
+  ];
+
+  let bestResult = null;
+  let bestScore = -1;
+
+  for (const cand of candidates) {
+    const s = Math.min(cand.size, Math.min(width, height));
+    const m = cand.margin;
+    const x = Math.max(0, width - m - s);
+    const y = Math.max(0, height - m - s);
+
+    const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x, y, size: s });
+    if (score > bestScore) {
+      bestScore = score;
+      bestResult = {
+        cand,
+        bestX: x,
+        bestY: y,
+        size: s,
+        score
+      };
+    }
+  }
+
+  // Local anchor refinement: fine-tune ±16px in step of 4px
+  if (bestResult && bestResult.score > 0.05) {
+    const { bestX, bestY, size, cand } = bestResult;
+    let refinedX = bestX;
+    let refinedY = bestY;
+    let refinedScore = bestResult.score;
+
+    for (let dy = -16; dy <= 16; dy += 4) {
+      for (let dx = -16; dx <= 16; dx += 4) {
+        if (dx === 0 && dy === 0) continue;
+        const testX = bestX + dx;
+        const testY = bestY + dy;
+        const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: testX, y: testY, size });
+        if (score > refinedScore) {
+          refinedScore = score;
+          refinedX = testX;
+          refinedY = testY;
+        }
+      }
+    }
+
+    const base = getWatermarkInfo(width, height);
+    return {
+      matchFound: refinedScore >= 0.12,
+      score: refinedScore,
+      presetKey: cand.presetKey,
+      name: cand.name,
+      offsetX: refinedX - base.x,
+      offsetY: refinedY - base.y,
+      sizeScale: cand.sizeScale || 1.0,
+      gain: cand.gain || 0.6,
+    };
+  }
+
+  const base = getWatermarkInfo(width, height);
+  const fallbackOffset = Math.round(-128 * baseRatio);
+  return {
+    matchFound: false,
+    score: bestScore > 0 ? bestScore : 0,
+    presetKey: 'new',
+    name: 'New Gemini (Adaptive)',
+    offsetX: fallbackOffset,
+    offsetY: fallbackOffset,
+    sizeScale: 1.0,
+    gain: 0.6,
+  };
+}
+
 function smoothScrollTo(element, offset = 75) {
   if (!element) return;
   setTimeout(() => {
@@ -576,6 +751,7 @@ function initImageRemover() {
   let currentPreviewFrame = null;
   let currentBase = null;
   let currentOriginalBitmap = null;
+  let currentDetected = null;
 
   const currentSettings = { gain: 0.6, offsetX: -128, offsetY: -128, sizeScale: 1 };
 
@@ -589,7 +765,22 @@ function initImageRemover() {
   function applyPreset(presetKey) {
     const w = currentPreviewFrame ? currentPreviewFrame.width : 1536;
     const h = currentPreviewFrame ? currentPreviewFrame.height : 1536;
-    const p = getAdaptiveImagePreset(presetKey, w, h);
+
+    let p;
+    if (presetKey === 'auto') {
+      if (currentDetected) {
+        p = {
+          gain: currentDetected.gain,
+          offsetX: currentDetected.offsetX,
+          offsetY: currentDetected.offsetY,
+          sizeScale: currentDetected.sizeScale
+        };
+      } else {
+        p = getAdaptiveImagePreset('new', w, h);
+      }
+    } else {
+      p = getAdaptiveImagePreset(presetKey, w, h);
+    }
     Object.assign(currentSettings, p);
 
     if (sliderOffsetX) {
@@ -628,7 +819,7 @@ function initImageRemover() {
   bindSlider(sliderOffsetY, 'offsetY', false);
 
   btnResetSliders?.addEventListener('click', () => {
-    applyPreset(presetSelect?.value || 'new');
+    applyPreset(presetSelect?.value || 'auto');
   });
 
   dropzone.onclick = () => fileInput.click();
@@ -763,7 +954,24 @@ function initImageRemover() {
       currentBase = watermarkEngine.getWatermarkInfo(currentPreviewFrame.width, currentPreviewFrame.height);
       if (currentOriginalBitmap) currentOriginalBitmap.close();
       currentOriginalBitmap = await createImageBitmap(currentPreviewFrame.imageData);
-      applyPreset(presetSelect?.value || 'new');
+
+      // Run Auto-Detection
+      currentDetected = detectWatermarkCandidate(currentPreviewFrame.imageData, currentPreviewFrame.width, currentPreviewFrame.height, watermarkEngine.bg96);
+
+      const badgeEl = document.getElementById('img-detect-badge');
+      if (badgeEl) {
+        if (currentDetected.matchFound) {
+          badgeEl.className = 'detect-badge';
+          badgeEl.innerHTML = `<iconify-icon icon="ph:sparkle-fill" width="16" style="color: #6366f1;"></iconify-icon> <span>Auto-Detected: <strong>${currentDetected.name}</strong> (${Math.round(currentDetected.score * 100)}% match)</span>`;
+          badgeEl.classList.remove('hidden');
+        } else {
+          badgeEl.className = 'detect-badge warning';
+          badgeEl.innerHTML = `<iconify-icon icon="ph:info-fill" width="16" style="color: #d97706;"></iconify-icon> <span>Standard Preset Applied (${currentDetected.name})</span>`;
+          badgeEl.classList.remove('hidden');
+        }
+      }
+
+      applyPreset(presetSelect?.value || 'auto');
       smoothScrollTo(tunerContainer);
     } catch (err) {
       console.error(err);

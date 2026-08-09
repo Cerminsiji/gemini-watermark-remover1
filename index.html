@@ -256,11 +256,15 @@
         </label>
         <div class="custom-select" data-select-target="img-preset">
           <button type="button" class="custom-select-trigger">
-            <span class="custom-select-value">New Gemini Images</span>
+            <span class="custom-select-value">Auto Detect (Recommended)</span>
             <iconify-icon icon="ph:caret-down-bold" class="custom-select-arrow" width="14"></iconify-icon>
           </button>
           <div class="custom-select-options">
-            <div class="custom-option selected" data-value="new">
+            <div class="custom-option selected" data-value="auto">
+              <span class="option-title">Auto Detect (Recommended)</span>
+              <iconify-icon icon="ph:check-bold" class="option-check" width="14"></iconify-icon>
+            </div>
+            <div class="custom-option" data-value="new">
               <span class="option-title">New Gemini Images</span>
               <iconify-icon icon="ph:check-bold" class="option-check" width="14"></iconify-icon>
             </div>
@@ -271,6 +275,7 @@
           </div>
         </div>
         <select id="img-preset" class="hidden">
+          <option value="auto" selected>Auto Detect (Recommended)</option>
           <option value="new">New Gemini Images</option>
           <option value="classic">Classic Corner</option>
         </select>
@@ -287,6 +292,7 @@
 
       <!-- Image Tuner & Live Preview Container -->
       <div id="img-tuner-container" class="tuner-container hidden">
+        <div id="img-detect-badge" class="detect-badge hidden"></div>
         <div class="tuner-preview-row">
           <div class="tuner-canvas-box main-box">
             <span class="canvas-title">
