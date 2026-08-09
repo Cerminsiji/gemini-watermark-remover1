@@ -873,8 +873,32 @@ function initImageRemover() {
   let currentBase = null;
   let currentOriginalBitmap = null;
   let currentDetected = null;
+  let isProcessing = false;
 
   const currentSettings = { gain: 0.6, offsetX: -128, offsetY: -128, sizeScale: 1 };
+
+  function setDropzoneLoading(loading, message = 'Processing image...') {
+    isProcessing = loading;
+    if (loading) {
+      dropzone.classList.add('loading');
+      dropzone.innerHTML = `
+        <div class="dropzone-loader">
+          <div class="dropzone-spinner"></div>
+          <p class="dropzone-title text-indigo-600">${message}</p>
+          <p class="dropzone-sub">Please wait, analyzing watermark...</p>
+        </div>
+      `;
+    } else {
+      dropzone.classList.remove('loading');
+      dropzone.innerHTML = `
+        <div class="dropzone-icon">
+          <iconify-icon icon="ph:upload-simple-bold"></iconify-icon>
+        </div>
+        <p class="dropzone-title">Upload or drag your Gemini Image</p>
+        <p class="dropzone-sub">Supports PNG, JPG, WebP</p>
+      `;
+    }
+  }
 
   function updateSliderLabels() {
     if (lblGain) lblGain.textContent = `${currentSettings.gain.toFixed(2)}x`;
@@ -954,11 +978,13 @@ function initImageRemover() {
     applyAutoSettings();
   });
 
-  dropzone.onclick = () => fileInput.click();
+  dropzone.onclick = () => {
+    if (!isProcessing) fileInput.click();
+  };
 
   dropzone.ondragover = (e) => {
     e.preventDefault();
-    dropzone.classList.add('drag-over');
+    if (!isProcessing) dropzone.classList.add('drag-over');
   };
 
   dropzone.ondragleave = () => dropzone.classList.remove('drag-over');
@@ -966,11 +992,14 @@ function initImageRemover() {
   dropzone.ondrop = (e) => {
     e.preventDefault();
     dropzone.classList.remove('drag-over');
+    if (isProcessing) return;
     if (e.dataTransfer.files.length) handleImageFile(e.dataTransfer.files[0]);
   };
 
   fileInput.onchange = (e) => {
+    if (isProcessing) return;
     if (e.target.files.length) handleImageFile(e.target.files[0]);
+    fileInput.value = '';
   };
 
   async function grabImageFrame(file) {
@@ -1040,9 +1069,7 @@ function initImageRemover() {
       const zctx = zoomCanvas.getContext('2d');
       zctx.imageSmoothingEnabled = false;
       zctx.clearRect(0, 0, zoomCanvas.width, zoomCanvas.height);
-
       zctx.drawImage(currentOriginalBitmap, roi.x, roi.y, roi.width, roi.height, 0, 0, zoomCanvas.width, zoomCanvas.height);
-
       const sx = zoomCanvas.width / roi.width;
       const sy = zoomCanvas.height / roi.height;
       zctx.strokeStyle = '#2563eb';
@@ -1067,21 +1094,19 @@ function initImageRemover() {
 
   async function handleImageFile(file) {
     if (!file.type.startsWith('image/')) return;
+    if (isProcessing) return;
+
+    setDropzoneLoading(true, 'Processing & Detecting Watermark...');
     currentFile = file;
 
-    if (!watermarkEngine) {
-      try {
-        watermarkEngine = await WatermarkEngine.create();
-      } catch (e) {
-        alert('Could not initialize watermark engine: ' + (e.message || e));
-        return;
-      }
-    }
-
     resultsArea.classList.add('hidden');
-    tunerContainer.classList.remove('hidden');
+    tunerContainer.classList.add('hidden');
 
     try {
+      if (!watermarkEngine) {
+        watermarkEngine = await WatermarkEngine.create();
+      }
+
       currentPreviewFrame = await grabImageFrame(file);
       currentBase = watermarkEngine.getWatermarkInfo(currentPreviewFrame.width, currentPreviewFrame.height);
       if (currentOriginalBitmap) currentOriginalBitmap.close();
@@ -1090,11 +1115,13 @@ function initImageRemover() {
       // Run Auto-Detection
       currentDetected = detectWatermarkCandidate(currentPreviewFrame.imageData, currentPreviewFrame.width, currentPreviewFrame.height, watermarkEngine.bg96);
 
+      tunerContainer.classList.remove('hidden');
       applyAutoSettings();
       smoothScrollTo(tunerContainer);
     } catch (err) {
       console.error(err);
-      alert('Could not generate preview for image.');
+    } finally {
+      setDropzoneLoading(false);
     }
   }
 
@@ -1184,8 +1211,32 @@ function initVideoRemover() {
   let currentBase = null;
   let currentOriginalBitmap = null;
   let currentDetected = null;
+  let isProcessing = false;
 
   const currentSettings = { gain: 0.6, offsetX: -24, offsetY: -24, sizeScale: 1 };
+
+  function setDropzoneLoading(loading, message = 'Extracting best frame...') {
+    isProcessing = loading;
+    if (loading) {
+      dropzone.classList.add('loading');
+      dropzone.innerHTML = `
+        <div class="dropzone-loader">
+          <div class="dropzone-spinner"></div>
+          <p class="dropzone-title text-indigo-600">${message}</p>
+          <p class="dropzone-sub">Scanning video frames & auto-detecting watermark...</p>
+        </div>
+      `;
+    } else {
+      dropzone.classList.remove('loading');
+      dropzone.innerHTML = `
+        <div class="dropzone-icon">
+          <iconify-icon icon="ph:video-bold"></iconify-icon>
+        </div>
+        <p class="dropzone-title">Upload or drag a Gemini Veo 3 video</p>
+        <p class="dropzone-sub">Supports MP4, WebM, MOV</p>
+      `;
+    }
+  }
 
   function updateSliderLabels() {
     if (lblGain) lblGain.textContent = `${currentSettings.gain.toFixed(2)}x`;
@@ -1265,11 +1316,13 @@ function initVideoRemover() {
     applyAutoSettings();
   });
 
-  dropzone.onclick = () => fileInput.click();
+  dropzone.onclick = () => {
+    if (!isProcessing) fileInput.click();
+  };
 
   dropzone.ondragover = (e) => {
     e.preventDefault();
-    dropzone.classList.add('drag-over');
+    if (!isProcessing) dropzone.classList.add('drag-over');
   };
 
   dropzone.ondragleave = () => dropzone.classList.remove('drag-over');
@@ -1277,11 +1330,14 @@ function initVideoRemover() {
   dropzone.ondrop = (e) => {
     e.preventDefault();
     dropzone.classList.remove('drag-over');
+    if (isProcessing) return;
     if (e.dataTransfer.files.length) handleVideoFile(e.dataTransfer.files[0]);
   };
 
   fileInput.onchange = (e) => {
+    if (isProcessing) return;
     if (e.target.files.length) handleVideoFile(e.target.files[0]);
+    fileInput.value = '';
   };
 
   function isFrameMeaningful(imageData) {
@@ -1316,25 +1372,28 @@ function initVideoRemover() {
         if (!cleanedUp) {
           cleanedUp = true;
           URL.revokeObjectURL(url);
-          v.src = '';
+          v.removeAttribute('src');
           v.load();
         }
       };
 
-      const timeout = setTimeout(() => {
+      const globalTimeout = setTimeout(() => {
         cleanup();
         reject(new Error('Timed out waiting for video frame extraction.'));
-      }, 15000);
+      }, 10000);
 
       v.onerror = () => {
-        clearTimeout(timeout);
+        clearTimeout(globalTimeout);
         cleanup();
         reject(new Error('Could not read this video file.'));
       };
 
-      v.onloadedmetadata = async () => {
+      const onReady = async () => {
+        v.onloadedmetadata = null;
+        v.onloadeddata = null;
+
         const duration = Number.isFinite(v.duration) && v.duration > 0 ? v.duration : 1;
-        const ratios = [0.35, 0.50, 0.20, 0.65, 0.15, 0.80, 0.05];
+        const ratios = [0.35, 0.50, 0.20, 0.65, 0.10];
         const timestamps = ratios.map(r => Math.min(Math.max(duration * r, 0.05), Math.max(0.05, duration - 0.05)));
 
         let bestFrame = null;
@@ -1349,27 +1408,38 @@ function initVideoRemover() {
 
         const seekAndCapture = (time) => {
           return new Promise((res) => {
-            const onSeeked = () => {
-              const capture = () => {
-                try {
-                  cx.drawImage(v, 0, 0, w, h);
-                  const imageData = cx.getImageData(0, 0, w, h);
-                  res(imageData);
-                } catch {
-                  res(null);
-                }
-              };
-              if ('requestVideoFrameCallback' in v) {
-                v.requestVideoFrameCallback(() => capture());
-              } else {
-                setTimeout(capture, 30);
+            let done = false;
+            const finish = () => {
+              if (done) return;
+              done = true;
+              clearTimeout(seekTimer);
+              v.removeEventListener('seeked', onSeeked);
+              try {
+                cx.drawImage(v, 0, 0, w, h);
+                const imageData = cx.getImageData(0, 0, w, h);
+                res(imageData);
+              } catch {
+                res(null);
               }
             };
+
+            const onSeeked = () => {
+              setTimeout(finish, 20);
+            };
+
+            const seekTimer = setTimeout(() => {
+              finish();
+            }, 1200);
+
             v.addEventListener('seeked', onSeeked, { once: true });
             try {
-              v.currentTime = time;
+              if (Math.abs(v.currentTime - time) < 0.01) {
+                finish();
+              } else {
+                v.currentTime = time;
+              }
             } catch {
-              res(null);
+              finish();
             }
           });
         };
@@ -1379,7 +1449,7 @@ function initVideoRemover() {
           if (!imageData) continue;
 
           if (isFrameMeaningful(imageData)) {
-            clearTimeout(timeout);
+            clearTimeout(globalTimeout);
             cleanup();
             resolve({ width: w, height: h, imageData });
             return;
@@ -1387,7 +1457,8 @@ function initVideoRemover() {
 
           const data = imageData.data;
           let sum = 0, sumSq = 0, samples = 0;
-          for (let i = 0; i < data.length; i += 2000) {
+          const step = Math.max(4, Math.floor(data.length / 1000) * 4);
+          for (let i = 0; i < data.length; i += step) {
             const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
             sum += lum;
             sumSq += lum * lum;
@@ -1401,7 +1472,7 @@ function initVideoRemover() {
           }
         }
 
-        clearTimeout(timeout);
+        clearTimeout(globalTimeout);
         cleanup();
         if (bestFrame) {
           resolve({ width: w, height: h, imageData: bestFrame });
@@ -1409,6 +1480,13 @@ function initVideoRemover() {
           reject(new Error('Could not extract a readable frame from this video.'));
         }
       };
+
+      if (v.readyState >= 1) {
+        onReady();
+      } else {
+        v.onloadedmetadata = onReady;
+        v.onloadeddata = onReady;
+      }
     });
   }
 
@@ -1461,23 +1539,20 @@ function initVideoRemover() {
 
   async function handleVideoFile(file) {
     if (!file.type.startsWith('video/')) return;
-    currentFile = file;
+    if (isProcessing) return;
 
-    if (!videoEngine) {
-      try {
-        videoEngine = await VideoWatermarkEngine.create();
-      } catch (e) {
-        console.error('Video engine initialization failed:', e);
-        alert('Could not initialize video engine: ' + (e.message || e));
-        return;
-      }
-    }
+    setDropzoneLoading(true, 'Extracting Best Frame & Analyzing...');
+    currentFile = file;
 
     resultsArea.classList.add('hidden');
     statusContainer.classList.add('hidden');
-    tunerContainer.classList.remove('hidden');
+    tunerContainer.classList.add('hidden');
 
     try {
+      if (!videoEngine) {
+        videoEngine = await VideoWatermarkEngine.create();
+      }
+
       currentPreviewFrame = await grabPreviewFrame(file);
       currentBase = videoEngine.getVeoWatermark(currentPreviewFrame.width, currentPreviewFrame.height);
       if (currentOriginalBitmap) currentOriginalBitmap.close();
@@ -1486,11 +1561,14 @@ function initVideoRemover() {
       // Run Auto-Detection on video preview frame
       currentDetected = detectVideoWatermarkCandidate(currentPreviewFrame.imageData, currentPreviewFrame.width, currentPreviewFrame.height, videoEngine.sparkleImage);
 
+      tunerContainer.classList.remove('hidden');
       applyAutoSettings();
       smoothScrollTo(tunerContainer);
     } catch (err) {
       console.error(err);
       alert('Could not generate preview frame for video: ' + (err.message || err));
+    } finally {
+      setDropzoneLoading(false);
     }
   }
 

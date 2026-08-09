@@ -465,6 +465,37 @@ body {
   margin-top: 0.35rem;
 }
 
+.dropzone.loading {
+  pointer-events: none;
+  cursor: wait;
+  border-color: var(--brand-primary);
+  background: rgba(99, 102, 241, 0.04);
+  opacity: 0.9;
+}
+
+.dropzone-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.dropzone-spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid rgba(99, 102, 241, 0.2);
+  border-top-color: var(--brand-primary);
+  border-radius: 50%;
+  animation: dropzoneSpin 0.8s linear infinite;
+}
+
+@keyframes dropzoneSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ── Watermark Tuner & Live Preview ── */
 .tuner-container,
 #img-results,
