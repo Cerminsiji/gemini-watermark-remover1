@@ -339,33 +339,6 @@
 
     <!-- Video Removal Panel -->
     <section id="panel-video" class="card hidden">
-      <div class="custom-select-wrapper">
-        <label class="preset-label">
-          <iconify-icon icon="ph:sliders-horizontal-bold" width="16"></iconify-icon>
-          Watermark Preset:
-        </label>
-        <div class="custom-select" data-select-target="video-preset">
-          <button type="button" class="custom-select-trigger">
-            <span class="custom-select-value">New Gemini Veo Videos</span>
-            <iconify-icon icon="ph:caret-down-bold" class="custom-select-arrow" width="14"></iconify-icon>
-          </button>
-          <div class="custom-select-options">
-            <div class="custom-option selected" data-value="veo">
-              <span class="option-title">New Gemini Veo Videos</span>
-              <iconify-icon icon="ph:check-bold" class="option-check" width="14"></iconify-icon>
-            </div>
-            <div class="custom-option" data-value="corner">
-              <span class="option-title">Classic Corner</span>
-              <iconify-icon icon="ph:check-bold" class="option-check" width="14"></iconify-icon>
-            </div>
-          </div>
-        </div>
-        <select id="video-preset" class="hidden">
-          <option value="veo">New Gemini Veo Videos</option>
-          <option value="corner">Classic Corner</option>
-        </select>
-      </div>
-
       <div id="video-dropzone" class="dropzone">
         <div class="dropzone-icon">
           <iconify-icon icon="ph:video-bold"></iconify-icon>
@@ -377,6 +350,7 @@
 
       <!-- Video Tuner & Live Preview Container -->
       <div id="video-tuner-container" class="tuner-container hidden">
+        <div id="video-detect-badge" class="detect-badge hidden"></div>
         <div class="tuner-preview-row">
           <div class="tuner-canvas-box main-box">
             <span class="canvas-title">

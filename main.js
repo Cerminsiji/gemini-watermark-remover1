@@ -646,6 +646,128 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
   };
 }
 
+function detectVideoWatermarkCandidate(imageData, width, height, bgImg) {
+  const baseDim = Math.min(width, height);
+  const veoBase = {
+    size: Math.max(24, Math.min(Math.round(baseDim / 15), baseDim)),
+    margin: Math.round(baseDim / 10),
+  };
+
+  const candidates = [
+    // 1. Veo Adaptive Inset (Standard Veo watermark)
+    {
+      name: 'Gemini Veo (Adaptive Inset)',
+      size: veoBase.size,
+      margin: veoBase.margin,
+      gain: 0.6,
+      sizeScale: 1.0,
+      customOffset: () => {
+        const adaptiveOffset = Math.round(-24 * (baseDim / 720));
+        return { offsetX: adaptiveOffset, offsetY: adaptiveOffset };
+      }
+    },
+    // 2. Veo Classic Corner
+    {
+      name: 'Gemini Veo (Corner)',
+      size: veoBase.size,
+      margin: veoBase.margin,
+      gain: 0.6,
+      sizeScale: 1.0,
+      customOffset: () => ({ offsetX: 0, offsetY: 0 })
+    },
+    // 3. Gemini Sparkle Image-style on Video
+    {
+      name: 'Gemini Sparkle (Standard)',
+      size: Math.max(24, Math.round(96 * (baseDim / 1536))),
+      margin: Math.max(16, Math.round(192 * (baseDim / 1536))),
+      gain: 0.6,
+      sizeScale: 1.0,
+      customOffset: (s, m) => {
+        const vBaseX = Math.max(0, width - veoBase.margin - veoBase.size);
+        const vBaseY = Math.max(0, height - veoBase.margin - veoBase.size);
+        return {
+          offsetX: (width - m - s) - vBaseX,
+          offsetY: (height - m - s) - vBaseY
+        };
+      }
+    }
+  ];
+
+  let bestResult = null;
+  let bestScore = -1;
+
+  for (const cand of candidates) {
+    const s = Math.min(cand.size, Math.min(width, height));
+    const m = cand.margin;
+    let offset = { offsetX: 0, offsetY: 0 };
+    if (typeof cand.customOffset === 'function') {
+      offset = cand.customOffset(s, m);
+    }
+    const baseX = Math.max(0, width - veoBase.margin - veoBase.size);
+    const baseY = Math.max(0, height - veoBase.margin - veoBase.size);
+    const x = Math.max(0, Math.min(width - s, baseX + offset.offsetX));
+    const y = Math.max(0, Math.min(height - s, baseY + offset.offsetY));
+
+    const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x, y, size: s });
+    if (score > bestScore) {
+      bestScore = score;
+      bestResult = {
+        cand,
+        bestX: x,
+        bestY: y,
+        size: s,
+        score
+      };
+    }
+  }
+
+  const baseX = Math.max(0, width - veoBase.margin - veoBase.size);
+  const baseY = Math.max(0, height - veoBase.margin - veoBase.size);
+
+  // Local anchor refinement: fine-tune ±16px in step of 4px
+  if (bestResult && bestResult.score > 0.05) {
+    const { bestX, bestY, size, cand } = bestResult;
+    let refinedX = bestX;
+    let refinedY = bestY;
+    let refinedScore = bestResult.score;
+
+    for (let dy = -16; dy <= 16; dy += 4) {
+      for (let dx = -16; dx <= 16; dx += 4) {
+        if (dx === 0 && dy === 0) continue;
+        const testX = Math.max(0, Math.min(width - size, bestX + dx));
+        const testY = Math.max(0, Math.min(height - size, bestY + dy));
+        const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: testX, y: testY, size });
+        if (score > refinedScore) {
+          refinedScore = score;
+          refinedX = testX;
+          refinedY = testY;
+        }
+      }
+    }
+
+    return {
+      matchFound: refinedScore >= 0.10,
+      score: refinedScore,
+      name: cand.name,
+      offsetX: refinedX - baseX,
+      offsetY: refinedY - baseY,
+      sizeScale: cand.sizeScale || 1.0,
+      gain: cand.gain || 0.6,
+    };
+  }
+
+  const fallbackOffset = Math.round(-24 * (baseDim / 720));
+  return {
+    matchFound: false,
+    score: bestScore > 0 ? bestScore : 0,
+    name: 'Gemini Veo (Adaptive Inset)',
+    offsetX: fallbackOffset,
+    offsetY: fallbackOffset,
+    sizeScale: 1.0,
+    gain: 0.6,
+  };
+}
+
 function smoothScrollTo(element, offset = 75) {
   if (!element) return;
   setTimeout(() => {
@@ -1036,7 +1158,6 @@ function initVideoRemover() {
   const progressBar = document.getElementById('video-progress-bar');
   const progressText = document.getElementById('video-progress-text');
   const resultsArea = document.getElementById('video-results');
-  const presetSelect = document.getElementById('video-preset');
 
   const tunerContainer = document.getElementById('video-tuner-container');
   const mainCanvas = document.getElementById('video-main-canvas');
@@ -1062,6 +1183,7 @@ function initVideoRemover() {
   let currentPreviewFrame = null;
   let currentBase = null;
   let currentOriginalBitmap = null;
+  let currentDetected = null;
 
   const currentSettings = { gain: 0.6, offsetX: -24, offsetY: -24, sizeScale: 1 };
 
@@ -1072,10 +1194,39 @@ function initVideoRemover() {
     if (lblOffsetY) lblOffsetY.textContent = `${currentSettings.offsetY}px`;
   }
 
-  function applyPreset(presetKey) {
+  function updateDetectBadge() {
+    const badgeEl = document.getElementById('video-detect-badge');
+    if (!badgeEl) return;
+    if (currentDetected) {
+      if (currentDetected.matchFound) {
+        badgeEl.className = 'detect-badge';
+        badgeEl.innerHTML = `<iconify-icon icon="ph:scan" width="16" style="color: #6366f1;"></iconify-icon> <span>Auto-Detected: <strong>${currentDetected.name}</strong> (${Math.round(currentDetected.score * 100)}% match)</span>`;
+        badgeEl.classList.remove('hidden');
+      } else {
+        badgeEl.className = 'detect-badge warning';
+        badgeEl.innerHTML = `<iconify-icon icon="ph:info" width="16" style="color: #d97706;"></iconify-icon> <span>Standard Preset Applied (${currentDetected.name})</span>`;
+        badgeEl.classList.remove('hidden');
+      }
+    } else {
+      badgeEl.classList.add('hidden');
+    }
+  }
+
+  function applyAutoSettings() {
     const w = currentPreviewFrame ? currentPreviewFrame.width : 720;
     const h = currentPreviewFrame ? currentPreviewFrame.height : 720;
-    const p = getAdaptiveVideoPreset(presetKey, w, h);
+
+    let p;
+    if (currentDetected) {
+      p = {
+        gain: currentDetected.gain,
+        offsetX: currentDetected.offsetX,
+        offsetY: currentDetected.offsetY,
+        sizeScale: currentDetected.sizeScale
+      };
+    } else {
+      p = getAdaptiveVideoPreset('veo', w, h);
+    }
     Object.assign(currentSettings, p);
 
     if (sliderOffsetX) {
@@ -1092,12 +1243,9 @@ function initVideoRemover() {
     if (sliderScale) sliderScale.value = currentSettings.sizeScale;
 
     updateSliderLabels();
+    updateDetectBadge();
     renderTuner();
   }
-
-  presetSelect?.addEventListener('change', () => {
-    applyPreset(presetSelect.value);
-  });
 
   function bindSlider(element, prop, isFloat = false) {
     if (!element) return;
@@ -1114,7 +1262,7 @@ function initVideoRemover() {
   bindSlider(sliderOffsetY, 'offsetY', false);
 
   btnResetSliders?.addEventListener('click', () => {
-    applyPreset(presetSelect?.value || 'veo');
+    applyAutoSettings();
   });
 
   dropzone.onclick = () => fileInput.click();
@@ -1237,7 +1385,11 @@ function initVideoRemover() {
       currentBase = videoEngine.getVeoWatermark(currentPreviewFrame.width, currentPreviewFrame.height);
       if (currentOriginalBitmap) currentOriginalBitmap.close();
       currentOriginalBitmap = await createImageBitmap(currentPreviewFrame.imageData);
-      applyPreset(presetSelect?.value || 'veo');
+
+      // Run Auto-Detection on video preview frame
+      currentDetected = detectVideoWatermarkCandidate(currentPreviewFrame.imageData, currentPreviewFrame.width, currentPreviewFrame.height, videoEngine.sparkleImage);
+
+      applyAutoSettings();
       smoothScrollTo(tunerContainer);
     } catch (err) {
       console.error(err);
