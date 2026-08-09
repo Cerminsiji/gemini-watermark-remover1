@@ -31,6 +31,10 @@
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -462,6 +466,13 @@ body {
 }
 
 /* ── Watermark Tuner & Live Preview ── */
+.tuner-container,
+#img-results,
+#video-results,
+#video-status {
+  scroll-margin-top: 5rem;
+}
+
 .tuner-container {
   display: flex;
   flex-direction: column;

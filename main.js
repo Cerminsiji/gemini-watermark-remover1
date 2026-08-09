@@ -438,6 +438,19 @@ const VIDEO_PRESETS = {
   corner: { gain: 0.6, offsetX: 0, offsetY: 0, sizeScale: 1 }
 };
 
+function smoothScrollTo(element, offset = 75) {
+  if (!element) return;
+  setTimeout(() => {
+    const rect = element.getBoundingClientRect();
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const targetY = rect.top + scrollTop - offset;
+    window.scrollTo({
+      top: Math.max(0, targetY),
+      behavior: 'smooth'
+    });
+  }, 100);
+}
+
 function init() {
   initTabs();
   initImageRemover();
@@ -689,6 +702,7 @@ function initImageRemover() {
       if (currentOriginalBitmap) currentOriginalBitmap.close();
       currentOriginalBitmap = await createImageBitmap(currentPreviewFrame.imageData);
       applyPreset(presetSelect?.value || 'new');
+      smoothScrollTo(tunerContainer);
     } catch (err) {
       console.error(err);
       alert('Could not generate preview for image.');
@@ -740,6 +754,7 @@ function initImageRemover() {
           </div>
         </div>
       `;
+      smoothScrollTo(resultsArea);
     } catch (err) {
       console.error(err);
       alert('Error exporting image: ' + err.message);
@@ -946,6 +961,7 @@ function initVideoRemover() {
       if (currentOriginalBitmap) currentOriginalBitmap.close();
       currentOriginalBitmap = await createImageBitmap(currentPreviewFrame.imageData);
       applyPreset(presetSelect?.value || 'veo');
+      smoothScrollTo(tunerContainer);
     } catch (err) {
       console.error(err);
       alert('Could not generate preview frame for video: ' + (err.message || err));
@@ -960,6 +976,7 @@ function initVideoRemover() {
     resultsArea.classList.add('hidden');
     progressBar.style.width = '0%';
     progressText.textContent = '0%';
+    smoothScrollTo(statusContainer);
 
     try {
       const res = await videoEngine.process(currentFile, {
@@ -994,6 +1011,7 @@ function initVideoRemover() {
           </div>
         </div>
       `;
+      smoothScrollTo(resultsArea);
     } catch (err) {
       console.error(err);
       statusContainer.classList.add('hidden');
