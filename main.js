@@ -471,7 +471,7 @@ function getAdaptiveVideoPreset(presetKey, width = 720, height = 720) {
   };
 }
 
-// ── Watermark Auto-Detection System with Multi-Scale Pyramid Matching ──
+// ── Advanced Watermark Auto-Detection System (Fused Multi-Scale, Gradient & Dual-Polarity) ──
 
 const alphaTemplateCache = new Map();
 
@@ -486,9 +486,27 @@ function getAlphaTemplateData(bgImg, size) {
   cx.imageSmoothingEnabled = true;
   cx.imageSmoothingQuality = 'high';
   cx.drawImage(bgImg, 0, 0, size, size);
-  const alphaData = cx.getImageData(0, 0, size, size).data;
-  alphaTemplateCache.set(size, alphaData);
-  return alphaData;
+  const raw = cx.getImageData(0, 0, size, size).data;
+
+  const alphas = new Float32Array(size * size);
+  for (let i = 0; i < alphas.length; i++) {
+    const o = i * 4;
+    alphas[i] = Math.max(raw[o], raw[o + 1], raw[o + 2]) / 255.0;
+  }
+
+  const gradMag = new Float32Array(size * size);
+  for (let r = 1; r < size - 1; r++) {
+    for (let col = 1; col < size - 1; col++) {
+      const idx = r * size + col;
+      const gx = alphas[idx + 1] - alphas[idx - 1];
+      const gy = alphas[(r + 1) * size + col] - alphas[(r - 1) * size + col];
+      gradMag[idx] = Math.sqrt(gx * gx + gy * gy);
+    }
+  }
+
+  const template = { raw, alphas, gradMag, size };
+  alphaTemplateCache.set(size, template);
+  return template;
 }
 
 function evaluateCandidateMatch(imageData, width, height, bgImg, box) {
@@ -497,33 +515,75 @@ function evaluateCandidateMatch(imageData, width, height, bgImg, box) {
     return { score: -1, variance: 0 };
   }
 
-  const alphaData = getAlphaTemplateData(bgImg, size);
+  const template = getAlphaTemplateData(bgImg, size);
+  const { alphas, gradMag } = template;
 
   let sumL = 0, sumA = 0;
   let sumL2 = 0, sumA2 = 0;
   let sumLA = 0;
-  let n = 0;
 
-  const step = size > 64 ? 2 : 1;
+  let sumInvL = 0;
+  let sumInvL2 = 0;
+  let sumInvLA = 0;
+
+  let sumG = 0, sumGA = 0;
+  let sumG2 = 0, sumGA2 = 0;
+  let sumGGA = 0;
+
+  let n = 0;
+  let nGrad = 0;
+
+  const step = size > 80 ? 2 : 1;
 
   for (let r = 0; r < size; r += step) {
+    const imgRow = y + r;
     for (let col = 0; col < size; col += step) {
-      const imgIdx = ((y + r) * width + (x + col)) * 4;
-      const alphaIdx = (r * size + col) * 4;
+      const imgCol = x + col;
+      const imgIdx = (imgRow * width + imgCol) * 4;
+      const alphaIdx = r * size + col;
 
       const rVal = imageData.data[imgIdx];
       const gVal = imageData.data[imgIdx + 1];
       const bVal = imageData.data[imgIdx + 2];
       const lum = 0.299 * rVal + 0.587 * gVal + 0.114 * bVal;
-
-      const alpha = Math.max(alphaData[alphaIdx], alphaData[alphaIdx + 1], alphaData[alphaIdx + 2]) / 255.0;
+      const invLum = 255.0 - lum;
+      const alpha = alphas[alphaIdx];
 
       sumL += lum;
       sumA += alpha;
       sumL2 += lum * lum;
       sumA2 += alpha * alpha;
       sumLA += lum * alpha;
+
+      sumInvL += invLum;
+      sumInvL2 += invLum * invLum;
+      sumInvLA += invLum * alpha;
       n++;
+
+      // Gradient analysis (high-frequency diamond sparkle edges)
+      if (r > 0 && r < size - 1 && col > 0 && col < size - 1 && imgRow > 0 && imgRow < height - 1 && imgCol > 0 && imgCol < width - 1) {
+        const leftIdx = (imgRow * width + (imgCol - 1)) * 4;
+        const rightIdx = (imgRow * width + (imgCol + 1)) * 4;
+        const upIdx = ((imgRow - 1) * width + imgCol) * 4;
+        const downIdx = ((imgRow + 1) * width + imgCol) * 4;
+
+        const lumLeft = 0.299 * imageData.data[leftIdx] + 0.587 * imageData.data[leftIdx + 1] + 0.114 * imageData.data[leftIdx + 2];
+        const lumRight = 0.299 * imageData.data[rightIdx] + 0.587 * imageData.data[rightIdx + 1] + 0.114 * imageData.data[rightIdx + 2];
+        const lumUp = 0.299 * imageData.data[upIdx] + 0.587 * imageData.data[upIdx + 1] + 0.114 * imageData.data[upIdx + 2];
+        const lumDown = 0.299 * imageData.data[downIdx] + 0.587 * imageData.data[downIdx + 1] + 0.114 * imageData.data[downIdx + 2];
+
+        const gx = lumRight - lumLeft;
+        const gy = lumDown - lumUp;
+        const imgGrad = Math.sqrt(gx * gx + gy * gy);
+        const aGrad = gradMag[alphaIdx];
+
+        sumG += imgGrad;
+        sumGA += aGrad;
+        sumG2 += imgGrad * imgGrad;
+        sumGA2 += aGrad * aGrad;
+        sumGGA += imgGrad * aGrad;
+        nGrad++;
+      }
     }
   }
 
@@ -531,17 +591,50 @@ function evaluateCandidateMatch(imageData, width, height, bgImg, box) {
 
   const meanL = sumL / n;
   const meanA = sumA / n;
-  const varL = sumL2 / n - meanL * meanL;
-  const varA = sumA2 / n - meanA * meanA;
+  const varL = Math.max(0, sumL2 / n - meanL * meanL);
+  const varA = Math.max(0, sumA2 / n - meanA * meanA);
 
-  if (varL <= 1 || varA <= 0.0001) {
+  if (varA <= 0.0001) {
     return { score: 0, variance: varL };
   }
 
-  const covLA = sumLA / n - meanL * meanA;
-  const ncc = covLA / Math.sqrt(varL * varA);
+  // White polarity NCC
+  let nccWhite = 0;
+  if (varL > 0.5) {
+    const covLA = sumLA / n - meanL * meanA;
+    nccWhite = covLA / Math.sqrt(varL * varA);
+  }
 
-  return { score: ncc, variance: varL };
+  // Dark polarity NCC (for bright white backgrounds)
+  let nccDark = 0;
+  const meanInvL = sumInvL / n;
+  const varInvL = Math.max(0, sumInvL2 / n - meanInvL * meanInvL);
+  if (varInvL > 0.5 && meanL > 160) {
+    const covInvLA = sumInvLA / n - meanInvL * meanA;
+    nccDark = covInvLA / Math.sqrt(varInvL * varA);
+  }
+
+  const nccLum = Math.max(nccWhite, nccDark);
+
+  // Gradient edge NCC
+  let nccGrad = 0;
+  if (nGrad > 10) {
+    const meanG = sumG / nGrad;
+    const meanGA = sumGA / nGrad;
+    const varG = Math.max(0, sumG2 / nGrad - meanG * meanG);
+    const varGA = Math.max(0, sumGA2 / nGrad - meanGA * meanGA);
+    if (varG > 0.5 && varGA > 0.0001) {
+      const covGGA = sumGGA / nGrad - meanG * meanGA;
+      nccGrad = Math.max(0, covGGA / Math.sqrt(varG * varGA));
+    }
+  }
+
+  let fusedScore = (nccLum * 0.65) + (nccGrad * 0.35);
+  if (varL < 20) {
+    fusedScore = Math.max(fusedScore, (nccLum * 0.40) + (nccGrad * 0.60));
+  }
+
+  return { score: Math.max(0, fusedScore), variance: varL };
 }
 
 function detectWatermarkCandidate(imageData, width, height, bgImg) {
@@ -549,7 +642,7 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
   const baseRatio = minDim / 1536;
   const base = getWatermarkInfo(width, height);
 
-  // Candidate Layout Families:
+  // Candidate Layout Families with Bayesian Priors:
   const layoutFamilies = [
     // 1. New Gemini Adaptive Inset (12.5% Inset)
     {
@@ -560,7 +653,8 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
         const m = Math.max(8, Math.round(192 * baseRatio));
         return { x: Math.max(0, width - m - s), y: Math.max(0, height - m - s) };
       },
-      gain: 0.6
+      gain: 0.6,
+      prior: 1.08
     },
     // 2. Classic Corner Adaptive (4.16% Margin)
     {
@@ -571,7 +665,8 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
         const m = Math.max(8, Math.round(64 * baseRatio));
         return { x: Math.max(0, width - m - s), y: Math.max(0, height - m - s) };
       },
-      gain: 1.0
+      gain: 1.0,
+      prior: 1.04
     },
     // 3. Fixed Standard (96px watermark regardless of crop/resize)
     {
@@ -582,7 +677,8 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
         const m = minDim >= 1400 ? 192 : Math.round(128 * Math.max(0.5, minDim / 1024));
         return { x: Math.max(0, width - m - s), y: Math.max(0, height - m - s) };
       },
-      gain: 0.6
+      gain: 0.6,
+      prior: 1.02
     },
     // 4. Fixed 96px Classic Corner
     {
@@ -593,11 +689,12 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
         const m = minDim >= 1024 ? 64 : 32;
         return { x: Math.max(0, width - m - s), y: Math.max(0, height - m - s) };
       },
-      gain: 1.0
+      gain: 1.0,
+      prior: 1.01
     }
   ];
 
-  // Scale search pyramid: 0.55x to 1.70x
+  // Multi-Scale search pyramid: 0.55x to 1.70x
   const scalePyramid = [0.55, 0.70, 0.85, 1.00, 1.15, 1.30, 1.50, 1.70];
 
   let bestMatch = null;
@@ -608,16 +705,17 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
       const s = Math.max(16, Math.min(Math.round(layout.baseSize * scale), Math.min(width, height) - 8));
       const pos = layout.calcPos(s);
       const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: pos.x, y: pos.y, size: s });
+      const weightedScore = score * (layout.prior || 1.0);
 
-      if (score > bestScore) {
-        bestScore = score;
+      if (weightedScore > bestScore) {
+        bestScore = weightedScore;
         bestMatch = {
           layout,
           size: s,
           scale,
           x: pos.x,
           y: pos.y,
-          score
+          score: weightedScore
         };
       }
     }
@@ -645,9 +743,10 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
           const testX = Math.max(0, Math.min(width - testSize, bestMatch.x + dx));
           const testY = Math.max(0, Math.min(height - testSize, bestMatch.y + dy));
           const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: testX, y: testY, size: testSize });
+          const weightedScore = score * (bestMatch.layout.prior || 1.0);
 
-          if (score > refinedScore) {
-            refinedScore = score;
+          if (weightedScore > refinedScore) {
+            refinedScore = weightedScore;
             refinedX = testX;
             refinedY = testY;
             refinedSize = testSize;
@@ -659,8 +758,8 @@ function detectWatermarkCandidate(imageData, width, height, bgImg) {
     const calculatedScale = Math.round((refinedSize / base.size) * 100) / 100;
 
     return {
-      matchFound: refinedScore >= 0.12,
-      score: refinedScore,
+      matchFound: refinedScore >= 0.10,
+      score: Math.min(1.0, refinedScore),
       presetKey: bestMatch.layout.presetKey,
       name: `${bestMatch.layout.name} (${refinedSize}px)`,
       offsetX: refinedX - base.x,
@@ -704,7 +803,8 @@ function detectVideoWatermarkCandidate(imageData, width, height, bgImg) {
           y: Math.max(0, Math.min(height - s, baseY + adaptiveOffset))
         };
       },
-      gain: 0.6
+      gain: 0.6,
+      prior: 1.06
     },
     // 2. Veo Classic Corner
     {
@@ -718,7 +818,8 @@ function detectVideoWatermarkCandidate(imageData, width, height, bgImg) {
           y: Math.max(0, Math.min(height - s, baseY))
         };
       },
-      gain: 0.6
+      gain: 0.6,
+      prior: 1.02
     },
     // 3. Gemini Sparkle Image-style on Video
     {
@@ -731,7 +832,8 @@ function detectVideoWatermarkCandidate(imageData, width, height, bgImg) {
           y: Math.max(0, height - m - s)
         };
       },
-      gain: 0.6
+      gain: 0.6,
+      prior: 1.01
     }
   ];
 
@@ -745,16 +847,17 @@ function detectVideoWatermarkCandidate(imageData, width, height, bgImg) {
       const s = Math.max(16, Math.min(Math.round(layout.baseSize * scale), Math.min(width, height) - 8));
       const pos = layout.calcPos(s);
       const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: pos.x, y: pos.y, size: s });
+      const weightedScore = score * (layout.prior || 1.0);
 
-      if (score > bestScore) {
-        bestScore = score;
+      if (weightedScore > bestScore) {
+        bestScore = weightedScore;
         bestMatch = {
           layout,
           size: s,
           scale,
           x: pos.x,
           y: pos.y,
-          score
+          score: weightedScore
         };
       }
     }
@@ -782,9 +885,10 @@ function detectVideoWatermarkCandidate(imageData, width, height, bgImg) {
           const testX = Math.max(0, Math.min(width - testSize, bestMatch.x + dx));
           const testY = Math.max(0, Math.min(height - testSize, bestMatch.y + dy));
           const { score } = evaluateCandidateMatch(imageData, width, height, bgImg, { x: testX, y: testY, size: testSize });
+          const weightedScore = score * (bestMatch.layout.prior || 1.0);
 
-          if (score > refinedScore) {
-            refinedScore = score;
+          if (weightedScore > refinedScore) {
+            refinedScore = weightedScore;
             refinedX = testX;
             refinedY = testY;
             refinedSize = testSize;
@@ -796,8 +900,8 @@ function detectVideoWatermarkCandidate(imageData, width, height, bgImg) {
     const calculatedScale = Math.round((refinedSize / veoBase.size) * 100) / 100;
 
     return {
-      matchFound: refinedScore >= 0.10,
-      score: refinedScore,
+      matchFound: refinedScore >= 0.08,
+      score: Math.min(1.0, refinedScore),
       name: `${bestMatch.layout.name} (${refinedSize}px)`,
       offsetX: refinedX - baseX,
       offsetY: refinedY - baseY,
