@@ -1,3 +1,18 @@
+// ── Monetag Direct Link Configuration ──
+// Replace with your actual Monetag Direct Link URL
+const MONETAG_DIRECT_LINK = 'https://omg10.com/4/11542046';
+
+function handleDownloadAd() {
+  if (MONETAG_DIRECT_LINK) {
+    try {
+      window.open(MONETAG_DIRECT_LINK, '_blank');
+    } catch (e) {
+      console.error('Failed to open Monetag direct link:', e);
+    }
+  }
+}
+window.handleDownloadAd = handleDownloadAd;
+
 // ── 1. Engine Core (alphaMap, blendModes, geometry, tuner) ──
 function calculateAlphaMap(bgCaptureImageData) {
   const { width, height, data } = bgCaptureImageData;
@@ -1318,7 +1333,7 @@ function initImageRemover() {
             </div>
           </div>
           <div class="mt-4 text-center">
-            <a href="${url}" download="clean_${currentFile.name}" class="btn btn-primary">
+            <a href="${url}" download="clean_${currentFile.name}" class="btn btn-primary" onclick="handleDownloadAd()">
               Download Cleaned PNG
             </a>
           </div>
@@ -1763,7 +1778,7 @@ function initVideoRemover() {
             </div>
           </div>
           <div class="mt-4 text-center">
-            <a href="${res.url}" download="clean_${currentFile.name}" class="btn btn-primary">
+            <a href="${res.url}" download="clean_${currentFile.name}" class="btn btn-primary" onclick="handleDownloadAd()">
               Download Cleaned Video MP4
             </a>
           </div>
