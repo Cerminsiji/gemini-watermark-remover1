@@ -1334,9 +1334,11 @@ function initImageRemover() {
           </div>
           <div class="mt-4 text-center">
             <a href="${url}" download="clean_${currentFile.name}" class="btn btn-primary" onclick="handleDownloadAd()">
+              <iconify-icon icon="ph:download-simple-bold" width="16"></iconify-icon>
               Download Cleaned PNG
             </a>
           </div>
+          ${getPromoCardHtml('image')}
         </div>
       `;
       smoothScrollTo(resultsArea);
@@ -1779,9 +1781,11 @@ function initVideoRemover() {
           </div>
           <div class="mt-4 text-center">
             <a href="${res.url}" download="clean_${currentFile.name}" class="btn btn-primary" onclick="handleDownloadAd()">
+              <iconify-icon icon="ph:download-simple-bold" width="16"></iconify-icon>
               Download Cleaned Video MP4
             </a>
           </div>
+          ${getPromoCardHtml('video')}
         </div>
       `;
       smoothScrollTo(resultsArea);
@@ -1792,6 +1796,36 @@ function initVideoRemover() {
       alert(`Video processing failed: ${err.message || err}`);
     }
   });
+}
+
+// ── Results Screen Promo Card Generator ──
+function getPromoCardHtml(type = 'image') {
+  return `
+    <div class="results-promo-banner" data-auto-favicon="https://ishara-madu.github.io/online-image-converter/">
+      <div class="results-promo-badge-row">
+        <span class="results-promo-tag">
+          Recommended Free Tool
+        </span>
+        <span class="badge-featured">100% Free &amp; Fast</span>
+      </div>
+      <div class="results-promo-body">
+        <div class="results-promo-icon-box">
+          <img src="https://ishara-madu.github.io/online-image-converter/favicon.ico"
+            onerror="this.onerror=null; this.src='https://www.google.com/s2/favicons?domain=ishara-madu.github.io&amp;sz=64';"
+            alt="Online Image Converter Favicon"
+            class="tool-favicon-img" width="26" height="26" loading="lazy" />
+        </div>
+        <div class="results-promo-info">
+          <h4 class="results-promo-title">Convert image formats with Online Image Converter</h4>
+          <p class="results-promo-desc">Batch convert your cleaned files to WebP, PNG, JPG, AVIF, or GIF with lossless quality right in your browser.</p>
+        </div>
+        <a href="https://ishara-madu.github.io/online-image-converter/" target="_blank" rel="noopener noreferrer" class="results-promo-btn">
+          <span>Try Image Converter</span>
+          <iconify-icon icon="ph:arrow-square-out-bold" width="16"></iconify-icon>
+        </a>
+      </div>
+    </div>
+  `;
 }
 
 // ── GitHub Star Count Fetcher ──
@@ -1815,10 +1849,41 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchGitHubStars();
   initCustomSelects();
   initMobileMenu();
+  initAutoFavicons();
 });
 fetchGitHubStars();
 
-// ── Mobile Hamburger Menu Handler ──
+// ── Automatic Favicon Resolver for Tools ──
+function initAutoFavicons() {
+  document.querySelectorAll('[data-auto-favicon]').forEach((el) => {
+    const targetUrl = el.getAttribute('data-auto-favicon') || el.getAttribute('href');
+    if (!targetUrl) return;
+
+    const img = el.querySelector('.tool-favicon-img');
+    if (!img) return;
+
+    try {
+      const parsedUrl = new URL(targetUrl, window.location.href);
+      const domain = parsedUrl.hostname;
+      const directFavicon = `${parsedUrl.origin}${parsedUrl.pathname.replace(/\/+$/, '')}/assets/favicon-96x96.png`;
+      const fallbackFavicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
+      img.onerror = () => {
+        if (img.src !== fallbackFavicon) {
+          img.src = fallbackFavicon;
+        }
+      };
+
+      if (!img.src || img.src.includes('undefined')) {
+        img.src = directFavicon;
+      }
+    } catch (e) {
+      console.warn('Auto favicon parsing failed:', e);
+    }
+  });
+}
+
+// ── Mobile Hamburger Menu & Navbar Interactions ──
 function initMobileMenu() {
   const menuBtn = document.getElementById('mobile-menu-btn');
   const headerActions = document.getElementById('header-actions');
@@ -1827,26 +1892,57 @@ function initMobileMenu() {
   const iconHamburger = menuBtn.querySelector('.icon-hamburger');
   const iconClose = menuBtn.querySelector('.icon-close');
 
+  const closeMenu = () => {
+    headerActions.classList.remove('open');
+    menuBtn.classList.remove('active');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    if (iconHamburger && iconClose) {
+      iconHamburger.classList.remove('hidden');
+      iconClose.classList.add('hidden');
+    }
+  };
+
   menuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = headerActions.classList.toggle('open');
     menuBtn.classList.toggle('active', isOpen);
+    menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
     if (iconHamburger && iconClose) {
       iconHamburger.classList.toggle('hidden', isOpen);
       iconClose.classList.toggle('hidden', !isOpen);
     }
   });
 
+  // Close mobile menu when clicking nav links or promo links
+  headerActions.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => {
+      closeMenu();
+    });
+  });
+
   document.addEventListener('click', (e) => {
     if (!headerActions.contains(e.target) && !menuBtn.contains(e.target)) {
-      headerActions.classList.remove('open');
-      menuBtn.classList.remove('active');
-      if (iconHamburger && iconClose) {
-        iconHamburger.classList.remove('hidden');
-        iconClose.classList.add('hidden');
-      }
+      closeMenu();
     }
   });
+
+  // Tools dropdown click toggle (for touch/click accessibility)
+  const toolsDropdown = document.getElementById('tools-dropdown');
+  const toolsBtn = document.getElementById('tools-dropdown-btn');
+  if (toolsDropdown && toolsBtn) {
+    toolsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = toolsDropdown.classList.toggle('open');
+      toolsBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!toolsDropdown.contains(e.target)) {
+        toolsDropdown.classList.remove('open');
+        toolsBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
 }
 
 // ── Custom Select Component Logic ──

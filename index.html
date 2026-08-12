@@ -234,33 +234,128 @@
   <!-- Top Navigation Header -->
   <header class="app-header">
     <div class="header-container">
-      <div class="brand">
-        <img src="./assets/logo.webp" alt="Gemini Watermark Remover Logo" width="50" height="50" decoding="async"
+      <a href="#" class="brand" title="Gemini Watermark Remover">
+        <img src="./assets/logo.webp" alt="Gemini Watermark Remover Logo" width="42" height="42" decoding="async"
           fetchpriority="high" style="object-fit: cover;" />
         <div class="brand-text">
           <span class="brand-title">Gemini Watermark Remover</span>
         </div>
-      </div>
+      </a>
+
+      <!-- Desktop Navigation Menu -->
+      <nav class="nav-menu" aria-label="Main Navigation">
+        <a href="#how-it-works" class="nav-link">How it Works</a>
+        <a href="#comparison" class="nav-link">Comparison</a>
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#faq" class="nav-link">FAQ</a>
+
+        <!-- Tools Dropdown -->
+        <div class="nav-dropdown" id="tools-dropdown">
+          <button type="button" class="nav-link nav-dropdown-btn" id="tools-dropdown-btn" aria-expanded="false"
+            aria-haspopup="true">
+            <span>Tools</span>
+            <iconify-icon icon="ph:caret-down-bold" class="dropdown-arrow" width="12"></iconify-icon>
+          </button>
+          <div class="dropdown-menu" id="tools-dropdown-menu">
+            <a href="https://ishara-madu.github.io/online-image-converter/" target="_blank" rel="noopener noreferrer"
+              class="dropdown-item promo-item"
+              data-auto-favicon="https://ishara-madu.github.io/online-image-converter/">
+              <div class="dropdown-item-icon promo-icon">
+                <img src="https://ishara-madu.github.io/online-image-converter/favicon.ico"
+                  onerror="this.onerror=null; this.src='https://www.google.com/s2/favicons?domain=ishara-madu.github.io&amp;sz=64';"
+                  alt="Online Image Converter Favicon" class="tool-favicon-img" width="22" height="22" loading="lazy" />
+              </div>
+              <div class="dropdown-item-content">
+                <div class="dropdown-item-title-row">
+                  <span class="dropdown-item-title">Online Image Converter</span>
+                  <span class="badge-featured">Free &amp; Fast</span>
+                </div>
+                <p class="dropdown-item-desc">Convert WebP, PNG, JPG, AVIF, GIF with zero quality loss.</p>
+              </div>
+              <iconify-icon icon="ph:arrow-square-out-bold" width="16" class="dropdown-ext-icon"></iconify-icon>
+            </a>
+
+            <div class="dropdown-divider"></div>
+
+            <a href="#" class="dropdown-item active-tool">
+              <div class="dropdown-item-icon active-icon">
+                <img src="./assets/favicon-96x96.png" alt="Gemini Watermark Remover Favicon" class="tool-favicon-img"
+                  width="22" height="22" loading="lazy" />
+              </div>
+              <div class="dropdown-item-content">
+                <div class="dropdown-item-title-row">
+                  <span class="dropdown-item-title">Gemini Watermark Remover</span>
+                  <span class="badge-current">Current</span>
+                </div>
+                <p class="dropdown-item-desc">Remove Gemini &amp; Veo 3 watermarks mathematically.</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </nav>
 
       <!-- Hamburger Menu Toggle Button (Mobile Only) -->
-      <button type="button" id="mobile-menu-btn" class="mobile-menu-toggle" aria-label="Toggle navigation menu">
+      <button type="button" id="mobile-menu-btn" class="mobile-menu-toggle" aria-label="Toggle navigation menu"
+        aria-expanded="false">
         <iconify-icon icon="ph:list-bold" class="icon-hamburger" width="22"></iconify-icon>
         <iconify-icon icon="ph:x-bold" class="icon-close hidden" width="22"></iconify-icon>
       </button>
 
       <div id="header-actions" class="header-actions">
-        <a href="https://github.com/ishara-madu/gemini-watermark-remover" target="_blank" rel="noopener noreferrer"
-          class="btn-github" title="Star on GitHub">
-          <iconify-icon icon="ph:github-logo" width="20"></iconify-icon>
-          <iconify-icon icon="ph:star-fill" width="14" style="color: #eab308;"></iconify-icon>
-          <span id="star-count-num">--</span>
-          <span class="btn-github-label">Stars</span>
-        </a>
-        <a href="https://buymeacoffee.com/ishara.madu" target="_blank" rel="noopener noreferrer" class="btn-donate"
-          title="Support the project">
-          <iconify-icon icon="ph:heart-fill" width="16" style="color: #f43f5e;"></iconify-icon>
-          <span>Donate</span>
-        </a>
+        <!-- Mobile Navigation Menu (visible inside mobile dropdown) -->
+        <div class="mobile-nav-links">
+          <a href="#how-it-works" class="mobile-nav-link">
+            <iconify-icon icon="ph:info-bold" width="18"></iconify-icon>
+            <span>How it Works</span>
+          </a>
+          <a href="#comparison" class="mobile-nav-link">
+            <iconify-icon icon="ph:git-diff-bold" width="18"></iconify-icon>
+            <span>Comparison</span>
+          </a>
+          <a href="#features" class="mobile-nav-link">
+            <iconify-icon icon="ph:shield-check-bold" width="18"></iconify-icon>
+            <span>Features</span>
+          </a>
+          <a href="#faq" class="mobile-nav-link">
+            <iconify-icon icon="ph:question-bold" width="18"></iconify-icon>
+            <span>FAQ</span>
+          </a>
+
+          <div class="mobile-promo-card">
+            <div class="mobile-promo-header">
+              <span class="mobile-promo-label">Recommended Tool</span>
+              <span class="badge-featured">Free &amp; Fast</span>
+            </div>
+            <a href="https://ishara-madu.github.io/online-image-converter/" target="_blank" rel="noopener noreferrer"
+              class="mobile-promo-link" data-auto-favicon="https://ishara-madu.github.io/online-image-converter/">
+              <div class="dropdown-item-icon promo-icon">
+                <img src="https://ishara-madu.github.io/online-image-converter/favicon.ico"
+                  onerror="this.onerror=null; this.src='https://www.google.com/s2/favicons?domain=ishara-madu.github.io&amp;sz=64';"
+                  alt="Online Image Converter Favicon" class="tool-favicon-img" width="22" height="22" loading="lazy" />
+              </div>
+              <div class="mobile-promo-info">
+                <strong>Online Image Converter</strong>
+                <p>Convert WebP, PNG, JPG, AVIF in browser</p>
+              </div>
+              <iconify-icon icon="ph:arrow-square-out-bold" width="16" class="mobile-promo-ext"></iconify-icon>
+            </a>
+          </div>
+        </div>
+
+        <div class="header-action-buttons">
+          <a href="https://github.com/ishara-madu/gemini-watermark-remover" target="_blank" rel="noopener noreferrer"
+            class="btn-github" title="Star on GitHub">
+            <iconify-icon icon="ph:github-logo" width="18"></iconify-icon>
+            <iconify-icon icon="ph:star-fill" width="14" style="color: #eab308;"></iconify-icon>
+            <span id="star-count-num">--</span>
+            <span class="btn-github-label">Stars</span>
+          </a>
+          <a href="https://buymeacoffee.com/ishara.madu" target="_blank" rel="noopener noreferrer" class="btn-donate"
+            title="Support the project">
+            <iconify-icon icon="ph:heart-fill" width="16" style="color: #f43f5e;"></iconify-icon>
+            <span>Donate</span>
+          </a>
+        </div>
       </div>
     </div>
   </header>
@@ -494,7 +589,7 @@
     </section>
 
     <!-- How It Works Step-by-Step Section -->
-    <section class="how-it-works-section">
+    <section id="how-it-works" class="how-it-works-section">
       <h2 class="section-title">How to Remove Gemini Watermarks</h2>
       <div class="steps-grid">
         <div class="step-card">
@@ -534,7 +629,7 @@
     </section>
 
     <!-- Before & After Comparison Section -->
-    <section class="comparison-section">
+    <section id="comparison" class="comparison-section">
       <div class="comparison-layout">
         <!-- Left Side: Title & Description -->
         <div class="comparison-content">
@@ -573,7 +668,7 @@
     </section>
 
     <!-- Features Section (SEO Optimized) -->
-    <section class="features-section">
+    <section id="features" class="features-section">
       <h2 class="section-title">Why Choose Gemini Watermark Remover?</h2>
       <div class="features-grid">
         <div class="feature-card">
@@ -645,7 +740,7 @@
     </section>
 
     <!-- FAQ Section (Adaptive Desktop & Mobile Design) -->
-    <section class="faq-section">
+    <section id="faq" class="faq-section">
       <div class="faq-layout">
         <!-- Desktop Sticky Left Header -->
         <div class="faq-header-col">
