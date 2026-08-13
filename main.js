@@ -1,6 +1,6 @@
 // ── Monetag Direct Link Configuration ──
 // Replace with your actual Monetag Direct Link URL
-const MONETAG_DIRECT_LINK = 'https://omg10.com/4/11542046';
+const MONETAG_DIRECT_LINK = '';
 
 function handleDownloadAd() {
   if (MONETAG_DIRECT_LINK) {
